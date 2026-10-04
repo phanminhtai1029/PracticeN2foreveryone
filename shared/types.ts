@@ -20,6 +20,8 @@ export interface Question {
   answer: number | null;
   answerVerified?: boolean;
   answerNote?: string;
+  /** listening: offset in the audio where this question starts */
+  startSec?: number;
 }
 
 export interface Mondai {
@@ -31,6 +33,7 @@ export interface Mondai {
   weight: number;
   passage?: string;
   image?: string;
+  startSec?: number;
   questions: Question[];
 }
 
