@@ -32,11 +32,12 @@ Local: `wrangler dev` giả lập D1/R2 trên máy (`.wrangler/state`), không c
 ```sql
 users(id, username UNIQUE, password_hash, role 'admin'|'user', created_at)
 sessions(token PK, user_id, expires_at)
-exams(id PK  -- '2023-12', title, level, sort_order, audio_key, listening_duration_sec, data_json)
+exams(id PK  -- '2023-12', title, level, sort_order, meta_json)
+exam_mondai(exam_id, ord, data_json)   -- mỗi 問題 một dòng (D1 giới hạn 100KB/statement)
 attempts(id, user_id, exam_id, parts_json, answers_json, result_json, started_at, submitted_at)
 ```
 
-Nội dung đề lưu nguyên khối `data_json` trong bảng `exams` (đề đọc một lần, không truy vấn theo câu); khi phục vụ client, server loại bỏ trường `answer`. Cách này đơn giản hơn chia bảng mondai/questions và vẫn giữ đề trong database.
+Nội dung đề lưu dạng JSON: metadata trong `exams.meta_json`, mỗi 問題 một dòng `exam_mondai.data_json` (đề đọc một lần, không truy vấn theo câu); khi phục vụ client, server loại bỏ trường `answer`. Cách này đơn giản hơn chia bảng mondai/questions và vẫn giữ đề trong database.
 
 ### Định dạng exam.json
 
