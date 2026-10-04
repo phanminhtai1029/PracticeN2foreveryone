@@ -30,6 +30,10 @@ export const QuestionCard = memo(function QuestionCard({ q, chosen, active = fal
         )}
       </div>
 
+      {q.image && (
+        <img src={q.image} alt={`Hình của câu ${label}`} className="mt-3 w-full rounded-xl bg-white sm:max-w-md" loading="lazy" />
+      )}
+
       {textChoices ? (
         <div className={`mt-3 grid gap-2 ${compact ? 'grid-cols-2' : ''}`}>
           {q.choices.map((c, i) => {

@@ -230,6 +230,7 @@ function ReviewDetail({ review, q, m }: { review: QuestionReview; q: PublicQuest
         </div>
       )}
       {q.stem && <Markup text={q.stem} className="jp block" />}
+      {q.image && <img src={q.image} alt="" className="w-full rounded-xl bg-white" />}
       <div className="grid gap-2">
         {choices.map((c, i) => {
           const n = i + 1;

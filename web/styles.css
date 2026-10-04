@@ -51,6 +51,9 @@
     word-break: normal;
     line-break: strict;
   }
+  .jp ruby {
+    ruby-align: center;
+  }
   .jp rt {
     font-size: 0.55em;
     color: var(--color-muted);

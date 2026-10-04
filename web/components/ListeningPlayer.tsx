@@ -93,7 +93,7 @@ export function ListeningPlayer({ src, durationSec, startPos, started, nowLabel,
           <p className="truncate font-semibold">
             {state === 'playing' && (nowLabel ? `Đang phát · ${nowLabel}` : 'Đang phát')}
             {state === 'loading' && 'Đang tải audio…'}
-            {state === 'idle' && 'Nghe hiểu · chỉ phát một lần'}
+            {state === 'idle' && 'Nghe 1 lần'}
             {state === 'interrupted' && 'Audio bị gián đoạn'}
             {state === 'ended' && 'Đã nghe xong'}
             {state === 'error' && 'Không phát được audio'}

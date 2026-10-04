@@ -15,6 +15,8 @@ export interface Question {
   no: number;
   label?: string;
   stem: string;
+  /** figure printed with the question (e.g. listening 問題1 maps) */
+  image?: string;
   choices: string[];
   choiceCount: number;
   answer: number | null;
