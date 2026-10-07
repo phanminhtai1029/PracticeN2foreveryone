@@ -4,5 +4,6 @@
 set -euo pipefail
 id="$1"; mode="${2:---local}"
 for f in content/exams/"$id"/assets/*; do
-  npx wrangler r2 object put "n2-audio/exam-assets/$id/$(basename "$f")" --file "$f" "$mode"
+  npx wrangler r2 object put "n2-audio/exam-assets/$id/$(basename "$f")" --file "$f" \
+    --content-type "$(file --brief --mime-type "$f")" "$mode"
 done
