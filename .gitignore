@@ -5,3 +5,6 @@ dist/
 *.log
 Exam/
 .playwright-mcp/
+# Copyrighted exam content stays local (and in D1/R2) — never in the public repo.
+content/
+web/public/exam-assets/

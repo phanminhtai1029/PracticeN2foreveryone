@@ -12,6 +12,7 @@ npm run db:migrate                     # tạo bảng trong D1 local
 npm run db:seed                        # nạp đề từ content/exams/*/exam.json
 npm run user:create -- <tên> <mật-khẩu> --admin
 npm run audio:upload -- "Exam/Nghe N2 T12-2023 Bản chuẩn YuukiBui.mp3" 2023-12/listening.mp3
+npm run assets:upload -- 2023-12       # ảnh của đề → R2
 npm run dev                            # http://localhost:5173
 ```
 
@@ -29,14 +30,16 @@ Mở từ điện thoại/iPad cùng mạng Wi-Fi: `npm run dev -- --host`, rồ
 
 ## Production (Cloudflare)
 
-Đang chạy tại **https://n2.worktree.dpdns.org** (Worker `n2-practice`, D1 `n2db`, R2 `n2-audio`). Cần `npx wrangler login` một lần.
+Đang chạy tại **https://n2.worktree.dpdns.org** (Worker `n2-practice`, D1 `n2db`, R2 `n2-audio`).
+
+**CI/CD:** push lên `main` → GitHub Actions (`.github/workflows/deploy.yml`) chạy typecheck + test, áp migration D1 remote, rồi deploy. Cần 2 secret của repo: `CLOUDFLARE_API_TOKEN` và `CLOUDFLARE_ACCOUNT_ID`. Nội dung đề **không** nằm trong repo nên CI chỉ deploy code — đề, ảnh, audio vẫn nạp từ máy (cần `npx wrangler login` một lần):
 
 ```bash
-npm run deploy                                          # build + deploy code
-npx wrangler d1 migrations apply n2db --remote          # khi có migration mới
+npm run deploy                                          # deploy tay (khi không qua CI)
 npm run db:seed -- --remote                             # khi sửa/thêm đề
 npm run user:create -- <tên> <mk> --remote              # tạo user / đổi mật khẩu
 npm run audio:upload -- <file.mp3> <id>/listening.mp3 --remote
+npm run assets:upload -- <id> --remote                  # ảnh của đề
 ```
 
 Đăng nhập sai 10 lần trong 15 phút (theo username hoặc IP) bị khóa 15 phút. Mở khóa ngay:
@@ -47,7 +50,7 @@ npm run audio:upload -- <file.mp3> <id>/listening.mp3 --remote
 1. Tạo `content/exams/<id>/exam.json` (xem định dạng trong `docs/superpowers/specs/2026-10-04-n2-practice-web-design.md`, hoặc copy `2023-12`).
    - Furigana: `{漢字|かんじ}` · gạch chân: `<u>…</u>` · đậm: `**…**` · xuống dòng: `\n`.
    - Mỗi câu có `id` duy nhất trong đề, `answer` là số 1–4 (hoặc `null` nếu chưa có).
-   - Ảnh của đề đặt trong `web/public/exam-assets/<id>/`.
+   - Ảnh của đề đặt trong `content/exams/<id>/assets/`, tham chiếu bằng `"image": "/exam-assets/<id>/<file>"`, rồi `npm run assets:upload -- <id>` (Worker phục vụ ảnh từ R2, cần đăng nhập).
 2. `npm run db:seed`
 3. Nếu có file nghe: `npm run audio:upload -- <file.mp3> <id>/listening.mp3` và khai báo `"audio": { "key": "<id>/listening.mp3", "durationSec": … }`.
 
@@ -60,10 +63,10 @@ shared/    type + logic thuần dùng chung (markup furigana, chấm điểm)
 worker/    API Hono (auth, đề, nộp bài, stream audio)
 web/       giao diện React
 db/        migration SQL cho D1
-content/   nội dung đề (nguồn gốc, versioned)
-scripts/   seed, tạo user, upload audio
+content/   nội dung đề — chỉ có trên máy, không commit (xem Bản quyền)
+scripts/   seed, tạo user, upload audio/ảnh
 ```
 
 ## Bản quyền
 
-Nội dung đề thuộc Japan Foundation / JEES. Giữ repo **private**; web luôn yêu cầu đăng nhập. File PDF/mp3 trong `Exam/` không được commit.
+Nội dung đề thuộc Japan Foundation / JEES nên **không** có trong repo public này: `content/` (đề, đáp án, transcript, ảnh) và `Exam/` (PDF/mp3) bị gitignore, chỉ nằm trên máy và trong D1/R2. Web luôn yêu cầu đăng nhập, kể cả với ảnh và audio.

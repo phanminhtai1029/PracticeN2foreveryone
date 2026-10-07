@@ -1,8 +1,8 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../env';
 
-export const audioRoutes = new Hono<AppEnv>().get('/*', async (c) => {
-  const key = decodeURIComponent(c.req.path.replace(/^\/api\/audio\//, ''));
+/** Streams an object from the AUDIO bucket, honouring Range requests (seeking in <audio>). */
+export async function serveR2(c: Context<AppEnv>, key: string, fallbackType: string) {
   const range = c.req.header('range');
   const obj = await c.env.AUDIO.get(key, range ? { range: c.req.raw.headers } : undefined);
   if (!obj) return c.json({ error: 'not found' }, 404);
@@ -12,7 +12,7 @@ export const audioRoutes = new Hono<AppEnv>().get('/*', async (c) => {
   headers.set('etag', obj.httpEtag);
   headers.set('accept-ranges', 'bytes');
   headers.set('cache-control', 'private, max-age=86400');
-  if (!headers.has('content-type')) headers.set('content-type', 'audio/mpeg');
+  if (!headers.has('content-type')) headers.set('content-type', fallbackType);
 
   const r = obj.range as { offset?: number; length?: number; suffix?: number } | undefined;
   if (range && r) {
@@ -24,4 +24,8 @@ export const audioRoutes = new Hono<AppEnv>().get('/*', async (c) => {
   }
   headers.set('content-length', String(obj.size));
   return new Response(obj.body, { headers });
-});
+}
+
+export const audioRoutes = new Hono<AppEnv>().get('/*', (c) =>
+  serveR2(c, decodeURIComponent(c.req.path.replace(/^\/api\/audio\//, '')), 'audio/mpeg'),
+);

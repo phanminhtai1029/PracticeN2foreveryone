@@ -12,7 +12,8 @@
     "db:migrate": "wrangler d1 migrations apply n2db --local",
     "db:seed": "tsx scripts/seed.ts",
     "user:create": "tsx scripts/create-user.ts",
-    "audio:upload": "bash scripts/prepare-audio.sh"
+    "audio:upload": "bash scripts/prepare-audio.sh",
+    "assets:upload": "bash scripts/upload-assets.sh"
   },
   "dependencies": {
     "hono": "^4.13.13",

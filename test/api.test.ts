@@ -215,3 +215,29 @@ describe('attempts', () => {
     }
   });
 });
+
+describe('exam assets', () => {
+  it('serves figures from R2 only to signed-in users', async () => {
+    const png = new Uint8Array([137, 80, 78, 71]);
+    const get = vi.fn(async (key: string) =>
+      key === 'exam-assets/fx/fig.png'
+        ? {
+            body: png,
+            size: png.length,
+            httpEtag: '"e"',
+            writeHttpMetadata: (h: Headers) => h.set('content-type', 'image/png'),
+          }
+        : null,
+    );
+    env.AUDIO = { get } as unknown as R2Bucket;
+
+    expect((await req('/exam-assets/fx/fig.png')).status).toBe(401);
+
+    const { cookie } = await login();
+    const res = await req('/exam-assets/fx/fig.png', { headers: { cookie } });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe('image/png');
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(png);
+    expect((await req('/exam-assets/fx/missing.png', { headers: { cookie } })).status).toBe(404);
+  });
+});

@@ -4,7 +4,7 @@ import { requireUser } from './auth';
 import { authRoutes } from './routes/auth';
 import { examRoutes } from './routes/exams';
 import { attemptRoutes } from './routes/attempts';
-import { audioRoutes } from './routes/audio';
+import { audioRoutes, serveR2 } from './routes/audio';
 
 export const app = new Hono<AppEnv>();
 
@@ -13,6 +13,10 @@ app.use('/api/*', async (c, next) => (c.req.path.startsWith('/api/auth/') ? next
 app.route('/api/exams', examRoutes);
 app.route('/api/attempts', attemptRoutes);
 app.route('/api/audio', audioRoutes);
+// Exam figures live in R2 (not in the public repo) under the same paths content/ uses: /exam-assets/<exam>/<file>.
+app.get('/exam-assets/*', requireUser, (c) =>
+  serveR2(c, decodeURIComponent(c.req.path.slice(1)), 'application/octet-stream'),
+);
 app.all('/api/*', (c) => c.json({ error: 'not found' }, 404));
 app.onError((err, c) => {
   console.error(err);
