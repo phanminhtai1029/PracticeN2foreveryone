@@ -68,6 +68,8 @@ export const attemptRoutes = new Hono<AppEnv>()
         parts: JSON.parse(r.parts_json),
         total: result.total,
         status: result.status,
+        correct: result.parts.reduce((s, p) => s + p.correct, 0),
+        graded: result.parts.reduce((s, p) => s + p.total, 0),
         submittedAt: r.submitted_at,
       };
     });

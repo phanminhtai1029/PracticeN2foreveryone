@@ -3,6 +3,8 @@ export type Group = 'language' | 'reading' | 'listening';
 
 export const PARTS: Part[] = ['vocab', 'grammar', 'reading', 'listening'];
 export const GROUPS: Group[] = ['language', 'reading', 'listening'];
+export const isFullExam = (parts: readonly Part[]) => PARTS.every((p) => parts.includes(p));
+
 export const PART_GROUP: Record<Part, Group> = {
   vocab: 'language',
   grammar: 'language',
@@ -104,6 +106,9 @@ export interface AttemptListItem {
   parts: Part[];
   total: number | null;
   status: AttemptResult['status'];
+  /** raw counts over graded questions — the headline for part-practice attempts */
+  correct: number;
+  graded: number;
   submittedAt: number;
 }
 

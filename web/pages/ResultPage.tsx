@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import type { AttemptDetail, GroupResult, Part, PublicExam, PublicMondai, PublicQuestion, QuestionReview } from '../../shared/types';
-import { GROUP_LABEL, PART_JP, PART_LABEL } from '../../shared/types';
+import { GROUP_LABEL, PART_GROUP, PART_JP, PART_LABEL, isFullExam } from '../../shared/types';
 import { PASS_GROUP_MIN, PASS_TOTAL } from '../../shared/scoring';
 import { api } from '../api';
 import { Layout } from '../components/Layout';
@@ -67,6 +67,29 @@ function GroupCard({ g }: { g: GroupResult }) {
   );
 }
 
+function GroupRow({ g }: { g: GroupResult }) {
+  return (
+    <section className="card flex items-center gap-4 px-4 py-3">
+      <div className="relative">
+        <Ring value={g.scaled} size={56} />
+        <span className="absolute inset-0 grid place-items-center text-sm font-bold tabular-nums">{g.scaled ?? '—'}</span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-jp text-sm font-semibold">{GROUP_LABEL[g.group]}</p>
+        <p className="text-xs text-muted">
+          {g.scaled === null ? g.reason : `Điểm quy đổi ước lượng · đỗ phần khi ≥ ${PASS_GROUP_MIN}`}
+        </p>
+      </div>
+      {g.scaled !== null && (
+        <span className="font-semibold tabular-nums">
+          {g.scaled}
+          <span className="text-muted">/60</span>
+        </span>
+      )}
+    </section>
+  );
+}
+
 function ResultView({ attempt, exam }: { attempt: AttemptDetail; exam: PublicExam }) {
   const { result } = attempt;
   const [open, setOpen] = useState<string | null>(null);
@@ -83,32 +106,66 @@ function ResultView({ attempt, exam }: { attempt: AttemptDetail; exam: PublicExa
   }, [result.review]);
   const openReview = open ? result.review.find((r) => r.id === open) : undefined;
   const duration = (attempt.submittedAt - attempt.startedAt) / 1000;
+  const when = `${formatDate(attempt.submittedAt)} · làm trong ${formatClock(duration)}`;
+  const full = isFullExam(attempt.parts);
+  const correct = result.parts.reduce((s, p) => s + p.correct, 0);
+  const graded = result.parts.reduce((s, p) => s + p.total, 0);
+  // part practice: only show a scaled-score ring for groups whose parts were all taken (e.g. vocab + grammar)
+  const coveredGroups = result.groups.filter((g) =>
+    Object.entries(PART_GROUP).every(([p, grp]) => grp !== g.group || attempt.parts.includes(p as Part)),
+  );
 
   return (
     <div className="space-y-6">
-      <section className="card relative overflow-hidden p-5 text-center sm:p-6">
-        <div className="pointer-events-none absolute inset-x-0 -top-24 mx-auto h-48 w-72 rounded-full bg-accent/10 blur-3xl" />
-        <p className="text-sm text-muted">{exam.title}</p>
-        <div className="mt-3 flex items-baseline justify-center gap-1">
-          <span className="text-6xl font-bold tracking-tight tabular-nums">{result.total ?? '—'}</span>
-          <span className="text-xl text-muted">/180</span>
-        </div>
-        <StatusBadge status={result.status} className="mt-3 px-3 py-1 text-sm" />
-        <p className="mt-3 text-xs text-faint">
-          {result.status === 'provisional'
-            ? 'Chưa đủ dữ liệu để kết luận đỗ/trượt (cần làm full đề và có đủ đáp án).'
-            : `Điểm đỗ N2: tổng ≥ ${PASS_TOTAL} và mỗi phần ≥ ${PASS_GROUP_MIN}. Điểm quy đổi chỉ mang tính ước lượng.`}
-        </p>
-        <p className="mt-1 text-xs text-faint">
-          {formatDate(attempt.submittedAt)} · làm trong {formatClock(duration)}
-        </p>
-      </section>
+      {full ? (
+        <>
+          <section className="card relative overflow-hidden p-5 text-center sm:p-6">
+            <div className="pointer-events-none absolute inset-x-0 -top-24 mx-auto h-48 w-72 rounded-full bg-accent/10 blur-3xl" />
+            <p className="text-sm text-muted">{exam.title}</p>
+            <div className="mt-3 flex items-baseline justify-center gap-1">
+              <span className="text-6xl font-bold tracking-tight tabular-nums">{result.total ?? '—'}</span>
+              <span className="text-xl text-muted">/180</span>
+            </div>
+            <StatusBadge status={result.status} className="mt-3 px-3 py-1 text-sm" />
+            <p className="mt-3 text-xs text-faint">
+              {result.status === 'provisional'
+                ? 'Chưa đủ đáp án để kết luận đỗ/trượt.'
+                : `Điểm đỗ N2: tổng ≥ ${PASS_TOTAL} và mỗi phần ≥ ${PASS_GROUP_MIN}. Điểm quy đổi chỉ mang tính ước lượng.`}
+            </p>
+            <p className="mt-1 text-xs text-faint">{when}</p>
+          </section>
 
-      <section className="grid grid-cols-3 gap-2 sm:gap-3">
-        {result.groups.map((g) => (
-          <GroupCard key={g.group} g={g} />
-        ))}
-      </section>
+          <section className="grid grid-cols-3 gap-2 sm:gap-3">
+            {result.groups.map((g) => (
+              <GroupCard key={g.group} g={g} />
+            ))}
+          </section>
+        </>
+      ) : (
+        <>
+          <section className="card relative overflow-hidden p-5 text-center sm:p-6">
+            <div className="pointer-events-none absolute inset-x-0 -top-24 mx-auto h-48 w-72 rounded-full bg-accent/10 blur-3xl" />
+            <p className="text-sm text-muted">{exam.title}</p>
+            <p className="mt-1 text-sm font-medium">Luyện {attempt.parts.map((p) => PART_LABEL[p]).join(' + ')}</p>
+            {graded > 0 ? (
+              <>
+                <div className="mt-3 flex items-baseline justify-center gap-1">
+                  <span className="text-6xl font-bold tracking-tight tabular-nums">{correct}</span>
+                  <span className="text-xl text-muted">/{graded} câu đúng</span>
+                </div>
+                <p className="mt-2 text-2xl font-semibold text-accent tabular-nums">{Math.round((correct / graded) * 100)}%</p>
+              </>
+            ) : (
+              <p className="mt-4 text-sm text-warn">Phần này chưa có đáp án để chấm.</p>
+            )}
+            <p className="mt-3 text-xs text-faint">{when}</p>
+          </section>
+
+          {coveredGroups.map((g) => (
+            <GroupRow key={g.group} g={g} />
+          ))}
+        </>
+      )}
 
       <section className="card divide-y divide-line">
         {result.parts.map((p) => {

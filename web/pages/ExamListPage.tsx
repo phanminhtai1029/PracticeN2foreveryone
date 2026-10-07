@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import type { AttemptListItem, ExamSummary } from '../../shared/types';
-import { PARTS, PART_LABEL } from '../../shared/types';
+import { PARTS, PART_LABEL, isFullExam } from '../../shared/types';
 import { api } from '../api';
 import { Layout } from '../components/Layout';
 import { StatusBadge } from '../components/StatusBadge';
@@ -75,11 +75,20 @@ export function ExamListPage() {
                       {exams?.find((e) => e.id === h.examId)?.title ?? h.examId}
                     </p>
                     <p className="truncate text-xs text-muted">
-                      {formatDate(h.submittedAt)} · {h.parts.length === 4 ? 'Full đề' : h.parts.map((p) => PART_LABEL[p]).join(', ')}
+                      {formatDate(h.submittedAt)} · {isFullExam(h.parts) ? 'Full đề' : h.parts.map((p) => PART_LABEL[p]).join(', ')}
                     </p>
                   </div>
-                  <span className="font-semibold tabular-nums">{h.total ?? '—'}</span>
-                  <StatusBadge status={h.status} />
+                  {isFullExam(h.parts) ? (
+                    <>
+                      <span className="font-semibold tabular-nums">{h.total ?? '—'}</span>
+                      <StatusBadge status={h.status} />
+                    </>
+                  ) : (
+                    <span className="font-semibold tabular-nums">
+                      {h.correct}
+                      <span className="text-muted">/{h.graded}</span>
+                    </span>
+                  )}
                 </Link>
               </li>
             ))}

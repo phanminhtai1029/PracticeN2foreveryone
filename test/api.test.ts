@@ -190,8 +190,13 @@ describe('attempts', () => {
     expect(detail.result).toEqual(body.result);
     expect(detail.parts).toEqual(['vocab', 'grammar']);
 
-    const history = (await (await req('/api/attempts?examId=fx', { headers: { cookie } })).json()) as unknown[];
+    const history = (await (await req('/api/attempts?examId=fx', { headers: { cookie } })).json()) as {
+      correct: number;
+      graded: number;
+    }[];
     expect(history).toHaveLength(1);
+    expect(history[0].graded).toBeGreaterThan(0);
+    expect(history[0].correct).toBe(history[0].graded);
 
     const bob = await login('bob', 'pw-bob');
     expect((await req(`/api/attempts/${body.id}`, { headers: { cookie: bob.cookie } })).status).toBe(404);
