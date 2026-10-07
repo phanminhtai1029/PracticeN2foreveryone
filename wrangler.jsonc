@@ -3,6 +3,7 @@
   "name": "n2-practice",
   "main": "worker/index.ts",
   "compatibility_date": "2025-09-01",
+  "routes": [{ "pattern": "n2.worktree.dpdns.org", "custom_domain": true }],
   "assets": {
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
@@ -11,10 +12,11 @@
     {
       "binding": "DB",
       "database_name": "n2db",
-      // Local dev only. Replace with the real id from `wrangler d1 create n2db` before deploying.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "6feb87f5-bfca-4d73-a2bc-6f99fcc90bab",
       "migrations_dir": "db/migrations"
     }
   ],
-  "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "n2-audio" }]
+  "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "n2-audio" }],
+  // Login throttle: 10 attempts / 60s per username and per IP (see worker/routes/auth.ts).
+  "ratelimits": [{ "name": "LOGIN_LIMIT", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }]
 }

@@ -36,10 +36,40 @@ export async function verifyPassword(password: string, stored: string): Promise<
   }
 }
 
+export const LOCKOUT_MAX_FAILURES = 10;
+export const LOCKOUT_WINDOW_SEC = 15 * 60;
+
+/** True if any key has LOCKOUT_MAX_FAILURES failed logins inside the window. */
+export async function isLockedOut(db: D1Database, keys: string[]): Promise<boolean> {
+  const since = Math.floor(Date.now() / 1000) - LOCKOUT_WINDOW_SEC;
+  const { results } = await db
+    .prepare(`SELECT COUNT(*) AS n FROM login_failures WHERE key IN (${keys.map(() => '?').join(', ')}) AND at > ? GROUP BY key`)
+    .bind(...keys, since)
+    .all<{ n: number }>();
+  return results.some((r) => r.n >= LOCKOUT_MAX_FAILURES);
+}
+
+export async function recordLoginFailure(db: D1Database, keys: string[]): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await db.batch(keys.map((k) => db.prepare('INSERT INTO login_failures (key, at) VALUES (?, ?)').bind(k, now)));
+}
+
+/** On success: forget this user's failures and drop anything outside the window. */
+export async function clearLoginFailures(db: D1Database, userKey: string): Promise<void> {
+  const since = Math.floor(Date.now() / 1000) - LOCKOUT_WINDOW_SEC;
+  await db.prepare('DELETE FROM login_failures WHERE key = ? OR at <= ?').bind(userKey, since).run();
+}
+
+// Verified against when the username doesn't exist, so a miss costs the same PBKDF2 work as a hit.
+export const DUMMY_HASH = `pbkdf2$${ITERATIONS}$${b64(new Uint8Array(16))}$${b64(new Uint8Array(32))}`;
+
 export async function createSession(db: D1Database, userId: number): Promise<string> {
   const token = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('');
-  const expiresAt = Math.floor(Date.now() / 1000) + SESSION_TTL_SEC;
-  await db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').bind(token, userId, expiresAt).run();
+  const now = Math.floor(Date.now() / 1000);
+  await db.batch([
+    db.prepare('DELETE FROM sessions WHERE expires_at <= ?').bind(now),
+    db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').bind(token, userId, now + SESSION_TTL_SEC),
+  ]);
   return token;
 }
 

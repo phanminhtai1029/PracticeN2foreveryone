@@ -6,6 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "deploy": "vite build && wrangler deploy --config dist/n2_practice/wrangler.json",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "db:migrate": "wrangler d1 migrations apply n2db --local",

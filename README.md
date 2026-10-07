@@ -27,6 +27,21 @@ Mở từ điện thoại/iPad cùng mạng Wi-Fi: `npm run dev -- --host`, rồ
 | `npm run db:seed` | nạp lại đề sau khi sửa `exam.json` (ghi đè đề cùng id) |
 | `npm run user:create -- <tên> <mk>` | tạo user / đổi mật khẩu (thêm `--admin` cho admin) |
 
+## Production (Cloudflare)
+
+Đang chạy tại **https://n2.worktree.dpdns.org** (Worker `n2-practice`, D1 `n2db`, R2 `n2-audio`). Cần `npx wrangler login` một lần.
+
+```bash
+npm run deploy                                          # build + deploy code
+npx wrangler d1 migrations apply n2db --remote          # khi có migration mới
+npm run db:seed -- --remote                             # khi sửa/thêm đề
+npm run user:create -- <tên> <mk> --remote              # tạo user / đổi mật khẩu
+npm run audio:upload -- <file.mp3> <id>/listening.mp3 --remote
+```
+
+Đăng nhập sai 10 lần trong 15 phút (theo username hoặc IP) bị khóa 15 phút. Mở khóa ngay:
+`npx wrangler d1 execute n2db --remote --command "DELETE FROM login_failures"`.
+
 ## Thêm đề mới
 
 1. Tạo `content/exams/<id>/exam.json` (xem định dạng trong `docs/superpowers/specs/2026-10-04-n2-practice-web-design.md`, hoặc copy `2023-12`).
