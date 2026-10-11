@@ -1,6 +1,7 @@
 import { memo, useMemo, useState, type ReactNode } from 'react';
 import type { GrammarNote, Level, Part, PublicExam, PublicMondai, StudyNotes, VocabNote } from '../../shared/types';
 import { LEVELS, PARTS, PART_JP, PART_LABEL } from '../../shared/types';
+import { AnkiExport } from './AnkiExport';
 import { Markup } from './Markup';
 import { Icon } from './ui';
 
@@ -257,11 +258,14 @@ export function StudyList({ exam, notes, parts }: { exam: PublicExam; notes: Stu
         </div>
       </div>
 
-      <p className="mt-4 text-sm text-muted" role="status">
-        {view.shown} {unit}
-        {once && view.repeats > 0 && `, đã ẩn ${view.repeats} lần lặp lại`}
-        {cover !== 'none' && '. Chạm vào ô đỏ để xem.'}
-      </p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4">
+        <p className="text-sm text-muted" role="status">
+          {view.shown} {unit}
+          {once && view.repeats > 0 && `, đã ẩn ${view.repeats} lần lặp lại`}
+          {cover !== 'none' && '. Chạm vào ô đỏ để xem.'}
+        </p>
+        <AnkiExport exam={exam} notes={notes} available={available} initial={{ part, levels }} />
+      </div>
 
       {/* remounting on a change of cover puts the sheet back over everything */}
       <div key={`${kind}-${cover === 'reading' && kind === 'grammar' ? 'none' : cover}`} className="mt-3 space-y-6">

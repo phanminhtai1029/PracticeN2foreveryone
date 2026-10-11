@@ -65,6 +65,8 @@ npm run db:seed -- --check     # chỉ kiểm tra đề và ghi chú, không ghi
 npm run db:seed                # nạp đề kèm ghi chú (thêm --remote cho production)
 ```
 
+**Xuất sang Anki:** trong sổ từ có nút "Xuất sang Anki", chọn cả đề hoặc một phần, loại thẻ (từ vựng, ngữ pháp) và cấp độ rồi tải file `.apkg`. File được tạo ngay trong trình duyệt (`shared/anki.ts` gom thẻ, `shared/apkg.ts` ghi file bằng sql.js). Thẻ vào bộ `練習帳::<tên đề>::語彙` và `::文法`; mỗi từ chỉ có một thẻ dù xuất hiện ở nhiều bài hay nhiều đề, nên nhập lại không sinh thẻ trùng.
+
 問題 nào chưa có ghi chú (hiện là phần nghe) thì hai tab báo "chưa có lời giải". Cấp độ N5–N1 của từng từ là ước lượng.
 
 Đáp án đề 2023-12 do Claude tự giải (`answerVerified: false`) — nếu thấy sai, sửa `answer` trong `exam.json` rồi `npm run db:seed`.
