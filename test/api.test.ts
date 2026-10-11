@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { app } from '../worker/index';
 import { hashPassword } from '../worker/auth';
-import { insertExamStatements } from '../worker/db';
+import { insertExamStatements, insertNotesStatements } from '../worker/db';
 import { createTestD1 } from './d1shim';
-import { fixtureExam, ALL_RIGHT } from './fixtures';
+import { fixtureExam, fixtureNotes, ALL_RIGHT } from './fixtures';
 import type { Env } from '../worker/env';
 
 let env: Env;
@@ -213,6 +213,45 @@ describe('attempts', () => {
       const res = await req('/api/attempts', json(bad, cookie));
       expect([400, 404]).toContain(res.status);
     }
+  });
+});
+
+describe('study notes', () => {
+  beforeEach(() => env.DB.batch(insertNotesStatements(env.DB, 'fx', fixtureNotes())));
+
+  it('gives the word list before any attempt, without the worked answers', async () => {
+    expect((await req('/api/exams/fx/study')).status).toBe(401);
+    const { cookie } = await login();
+    const res = await req('/api/exams/fx/study', { headers: { cookie } });
+    const text = await res.text();
+    expect(text).not.toContain('explain');
+    expect(text).not.toContain('stemVi');
+    const study = JSON.parse(text) as { mondaiId: string; vocab: { word: string }[] }[];
+    expect(study.map((n) => n.mondaiId).sort()).toEqual(['mr', 'mv']);
+    expect(study.find((n) => n.mondaiId === 'mv')!.vocab[0].word).toBe('腕');
+    expect(await (await req('/api/exams/nope/study', { headers: { cookie } })).json()).toEqual([]);
+  });
+
+  it('gives worked answers only to the attempt owner, for the parts attempted', async () => {
+    const { cookie } = await login();
+    const submit = await req('/api/attempts', json({ examId: 'fx', parts: ['vocab', 'grammar'], answers: {}, startedAt: 1 }, cookie));
+    const { id } = (await submit.json()) as { id: number };
+
+    const notes = (await (await req(`/api/attempts/${id}/notes`, { headers: { cookie } })).json()) as {
+      mondaiId: string;
+      questions: { explain: string }[];
+    }[];
+    // reading has notes too, but this attempt did not cover it
+    expect(notes.map((n) => n.mondaiId)).toEqual(['mv']);
+    expect(notes[0].questions[0].explain).toBe('why v1');
+
+    const bob = await login('bob', 'pw-bob');
+    expect((await req(`/api/attempts/${id}/notes`, { headers: { cookie: bob.cookie } })).status).toBe(404);
+  });
+
+  it('goes away with the exam when it is reseeded', async () => {
+    await env.DB.batch(insertExamStatements(env.DB, fixtureExam()));
+    expect((await env.DB.prepare('SELECT COUNT(*) AS n FROM exam_notes').first<{ n: number }>())!.n).toBe(0);
   });
 });
 

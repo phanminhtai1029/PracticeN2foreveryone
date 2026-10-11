@@ -130,6 +130,15 @@ export function ExamSetupPage() {
         {picked.length ? `Bắt đầu · ${pickedCount} câu` : 'Chọn ít nhất một phần'}
       </button>
       <p className="mt-3 text-center text-xs text-faint">Làm theo phần: không giới hạn thời gian, đồng hồ đếm xuôi.</p>
+
+      <Link to={`/exam/${examId}/study`} className="card mt-8 flex items-center gap-4 p-4 transition hover:border-line-strong">
+        <Icon name="notebook" className="size-6 shrink-0 text-muted" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">Xem từ vựng và ngữ pháp của đề</span>
+          <span className="mt-0.5 block text-sm text-muted">Ôn trước khi làm: mọi từ và mẫu từ N5 đến N1, xếp theo từng bài.</span>
+        </span>
+        <Icon name="arrow" className="size-5 text-muted" />
+      </Link>
     </Layout>
   );
 }

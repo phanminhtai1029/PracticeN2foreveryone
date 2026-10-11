@@ -1,4 +1,4 @@
-import type { AttemptDetail, AttemptListItem, AttemptResult, Answers, ExamSummary, Part, PublicExam } from '../shared/types';
+import type { AttemptDetail, AttemptListItem, AttemptResult, Answers, ExamSummary, MondaiNotes, Part, PublicExam, StudyNotes } from '../shared/types';
 
 export interface User {
   id: number;
@@ -46,10 +46,12 @@ export const api = {
   logout: () => request<{ ok: true }>('/api/auth/logout', { method: 'POST' }),
   exams: () => request<ExamSummary[]>('/api/exams'),
   exam: (id: string) => request<PublicExam>(`/api/exams/${encodeURIComponent(id)}`),
+  study: (id: string) => request<StudyNotes[]>(`/api/exams/${encodeURIComponent(id)}/study`),
   submit: (body: { examId: string; parts: Part[]; answers: Answers; startedAt: number }) =>
     request<{ id: number; result: AttemptResult }>('/api/attempts', { json: body }),
   attempts: (examId?: string) =>
     request<AttemptListItem[]>(`/api/attempts${examId ? `?examId=${encodeURIComponent(examId)}` : ''}`),
   attempt: (id: number | string) => request<AttemptDetail>(`/api/attempts/${id}`),
+  attemptNotes: (id: number | string) => request<MondaiNotes[]>(`/api/attempts/${id}/notes`),
   audioUrl: (key: string) => `/api/audio/${key.split('/').map(encodeURIComponent).join('/')}`,
 };

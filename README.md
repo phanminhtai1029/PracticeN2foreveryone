@@ -25,7 +25,7 @@ Mở từ điện thoại/iPad cùng mạng Wi-Fi: `npm run dev -- --host`, rồ
 | `npm run dev` | chạy web + API (hot reload) |
 | `npm test` | chạy test (Vitest) |
 | `npm run typecheck` | kiểm tra TypeScript |
-| `npm run db:seed` | nạp lại đề sau khi sửa `exam.json` (ghi đè đề cùng id) |
+| `npm run db:seed` | nạp lại đề và ghi chú sau khi sửa `exam.json` hoặc `notes/*.json` (ghi đè đề cùng id) |
 | `npm run user:create -- <tên> <mk>` | tạo user / đổi mật khẩu (thêm `--admin` cho admin) |
 
 ## Production (Cloudflare)
@@ -53,6 +53,19 @@ npm run assets:upload -- <id> --remote                  # ảnh của đề
    - Ảnh của đề đặt trong `content/exams/<id>/assets/`, tham chiếu bằng `"image": "/exam-assets/<id>/<file>"`, rồi `npm run assets:upload -- <id>` (Worker phục vụ ảnh từ R2, cần đăng nhập).
 2. `npm run db:seed`
 3. Nếu có file nghe: `npm run audio:upload -- <file.mp3> <id>/listening.mp3` và khai báo `"audio": { "key": "<id>/listening.mp3", "durationSec": … }`.
+
+## Lời giải và sổ từ của đề
+
+Sau khi nộp bài, trang kết quả có thêm tab **解説 Giải thích** (bản dịch, lý do từng đáp án đúng/sai) và **語彙・文法 Từ và ngữ pháp**. Sổ từ cũng mở được trước khi làm, từ trang chọn phần thi.
+
+Nội dung nằm trong `content/exams/<id>/notes/*.json` (mỗi file là một mảng ghi chú theo 問題, chia file tuỳ ý), kiểu `MondaiNotes` trong `shared/types.ts`. Quy tắc soạn: `content/exams/2023-12/notes/NOTES.md`.
+
+```bash
+npm run db:seed -- --check     # chỉ kiểm tra đề và ghi chú, không ghi vào D1
+npm run db:seed                # nạp đề kèm ghi chú (thêm --remote cho production)
+```
+
+問題 nào chưa có ghi chú (hiện là phần nghe) thì hai tab báo "chưa có lời giải". Cấp độ N5–N1 của từng từ là ước lượng.
 
 Đáp án đề 2023-12 do Claude tự giải (`answerVerified: false`) — nếu thấy sai, sửa `answer` trong `exam.json` rồi `npm run db:seed`.
 

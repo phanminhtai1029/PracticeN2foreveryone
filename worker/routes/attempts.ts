@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../env';
-import { loadExam } from '../db';
+import { loadExam, loadNotes } from '../db';
 import { gradeAttempt } from '../../shared/scoring';
 import { PARTS, type Answers, type AttemptDetail, type AttemptListItem, type AttemptResult, type Part } from '../../shared/types';
 
@@ -90,4 +90,15 @@ export const attemptRoutes = new Hono<AppEnv>()
       submittedAt: r.submitted_at,
     };
     return c.json(detail);
+  })
+  // Worked answers, only for a submitted attempt and only for the parts it covered.
+  .get('/:id/notes', async (c) => {
+    const r = await c.env.DB.prepare('SELECT exam_id, parts_json FROM attempts WHERE id = ? AND user_id = ?')
+      .bind(Number(c.req.param('id')), c.get('user').id)
+      .first<Pick<AttemptRow, 'exam_id' | 'parts_json'>>();
+    if (!r) return c.json({ error: 'not found' }, 404);
+    const [exam, notes] = await Promise.all([loadExam(c.env.DB, r.exam_id), loadNotes(c.env.DB, r.exam_id)]);
+    const parts = JSON.parse(r.parts_json) as Part[];
+    const covered = new Set(exam?.mondai.filter((m) => parts.includes(m.part)).map((m) => m.id));
+    return c.json(notes.filter((n) => covered.has(n.mondaiId)));
   });

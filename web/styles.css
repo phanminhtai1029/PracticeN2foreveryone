@@ -76,6 +76,26 @@
     text-underline-offset: 5px;
     text-decoration-color: var(--color-accent);
   }
+
+  /* Vietnamese notes that quote Japanese: the lines leave room for the furigana of the quoted words. */
+  .gloss {
+    line-height: 1.75;
+  }
+  .gloss rt {
+    font-size: 0.6em;
+    color: var(--color-muted);
+  }
+
+  /* 赤シート, the red sheet laid over a word list: what is under it keeps its place but cannot be read. */
+  .sheet-cover {
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--color-shu) 24%, var(--color-surface));
+    color: transparent;
+    user-select: none;
+  }
+  .sheet-cover * {
+    color: transparent !important;
+  }
 }
 
 .no-scrollbar::-webkit-scrollbar {

@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { ArrowRight, Book, Check, ChevronLeft, Clock, Headphones, History, LayoutGrid, LogOut, Play, X } from 'lucide-react';
+import { ArrowRight, Book, Check, ChevronLeft, Clock, Headphones, History, LayoutGrid, LogOut, NotebookText, Play, Search, X } from 'lucide-react';
 import { AnimatePresence, m } from 'motion/react';
 
 /** The product name lives here only. 練習帳 = exercise book. */
@@ -17,6 +17,8 @@ const icons = {
   book: Book,
   arrow: ArrowRight,
   history: History,
+  search: Search,
+  notebook: NotebookText,
 } as const;
 
 export function Icon({ name, className = 'size-5' }: { name: keyof typeof icons; className?: string }) {

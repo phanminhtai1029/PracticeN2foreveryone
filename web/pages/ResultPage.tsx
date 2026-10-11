@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { animate, m, useMotionValue, useReducedMotion, useTransform } from 'motion/react';
-import type { AttemptDetail, AttemptResult, Group, Part, PartResult, PublicExam, PublicMondai, PublicQuestion, QuestionReview } from '../../shared/types';
+import type { AttemptDetail, AttemptResult, Group, MondaiNotes, Part, PartResult, PublicExam, PublicMondai, PublicQuestion, QuestionReview } from '../../shared/types';
 import { GROUPS, GROUP_LABEL, PART_GROUP, PART_JP, PART_LABEL, isFullExam } from '../../shared/types';
 import { GROUP_MAX, PASS_GROUP_MIN, passTotal } from '../../shared/scoring';
 import { api } from '../api';
+import { ExplainTab, MARK_LABEL, PassagePair, QuestionExplained, markOf, type Mark } from '../components/Explain';
 import { Layout } from '../components/Layout';
-import { Markup } from '../components/Markup';
+import { StudyList } from '../components/StudyList';
 import { ErrorBox, Sheet, formatClock, formatDate } from '../components/ui';
 
 const GROUP_VI: Record<Group, string> = { language: 'Kiến thức ngôn ngữ', reading: 'Đọc hiểu', listening: 'Nghe hiểu' };
@@ -263,9 +264,28 @@ function ScoreSlip({ attempt, exam }: { attempt: AttemptDetail; exam: PublicExam
   );
 }
 
+const TABS = [
+  { id: 'marks', jp: '採点', vi: 'Chấm điểm' },
+  { id: 'explain', jp: '解説', vi: 'Giải thích' },
+  { id: 'words', jp: '語彙・文法', vi: 'Từ và ngữ pháp' },
+] as const;
+type Tab = (typeof TABS)[number]['id'];
+
 function ResultView({ attempt, exam }: { attempt: AttemptDetail; exam: PublicExam }) {
   const { result } = attempt;
   const [open, setOpen] = useState<string | null>(null);
+  const [params, setParams] = useSearchParams();
+  const tab: Tab = TABS.find((t) => t.id === params.get('tab'))?.id ?? 'marks';
+
+  // the score does not wait for the notes: they load beside it and the tabs fill in when they arrive
+  const [notes, setNotes] = useState<MondaiNotes[] | null>(null);
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const loadNotes = useCallback(() => {
+    setNotesError(null);
+    api.attemptNotes(attempt.id).then(setNotes, (e: Error) => setNotesError(e.message));
+  }, [attempt.id]);
+  useEffect(loadNotes, [loadNotes]);
+  const notesByMondai = useMemo(() => new Map((notes ?? []).map((n) => [n.mondaiId, n])), [notes]);
 
   const questionIndex = useMemo(() => {
     const idx = new Map<string, { q: PublicQuestion; m: PublicMondai }>();
@@ -278,6 +298,7 @@ function ResultView({ attempt, exam }: { attempt: AttemptDetail; exam: PublicExa
     return map;
   }, [result.review]);
   const openReview = open ? result.review.find((r) => r.id === open) : undefined;
+  const opened = openReview && questionIndex.get(openReview.id);
 
   const actions = (
     <>
@@ -289,6 +310,11 @@ function ResultView({ attempt, exam }: { attempt: AttemptDetail; exam: PublicExa
       </Link>
     </>
   );
+  const notesPending = notesError ? (
+    <ErrorBox message={notesError} onRetry={loadNotes} />
+  ) : (
+    <div className="h-64 animate-pulse rounded-md bg-line" role="status" aria-label="Đang tải lời giải" />
+  );
 
   return (
     <div className="space-y-8 lg:grid lg:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] lg:items-start lg:gap-12 lg:space-y-0">
@@ -297,66 +323,84 @@ function ResultView({ attempt, exam }: { attempt: AttemptDetail; exam: PublicExa
         <div className="mt-5 hidden grid-cols-2 gap-3 lg:grid">{actions}</div>
       </div>
 
-      <section>
-        <h2 className="text-lg font-semibold">Xem lại từng câu</h2>
-        <p className="mt-1 text-sm text-muted">Câu đúng để chìm, câu cần xem lại mới tô màu. Chọn một câu để xem đáp án.</p>
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
-          <Legend cls={MARK.wrong} label="Sai" />
-          <Legend cls={MARK.blank} label="Bỏ trống" />
-          <Legend cls={MARK.right} label="Đúng" />
-          <Legend cls={MARK.ungraded} label="Chưa có đáp án" />
+      <div className="min-w-0">
+        <div className="sticky top-14 z-20 -mx-4 flex border-b border-line bg-bg/95 px-4 backdrop-blur lg:mx-0 lg:px-0" role="tablist" aria-label="Xem lại bài làm">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              id={`tab-${t.id}`}
+              aria-selected={tab === t.id}
+              aria-controls="result-panel"
+              onClick={() => setParams(t.id === 'marks' ? {} : { tab: t.id }, { replace: true })}
+              className={`-mb-px flex-1 border-b-2 px-1 pt-2.5 pb-2 text-center transition-colors sm:flex-none sm:px-5 ${tab === t.id ? 'border-ink text-ink' : 'border-transparent text-muted hover:text-ink'}`}
+            >
+              <span lang="ja" className="block font-mincho text-[17px] leading-tight font-bold">
+                {t.jp}
+              </span>
+              <span className="text-xs">{t.vi}</span>
+            </button>
+          ))}
         </div>
-        <div className="mt-5 space-y-6">
-          {[...reviewByPart].map(([part, items]) => {
-            const wrong = items.filter((r) => r.correct === false && r.chosen !== null).length;
-            const blank = items.filter((r) => r.correct === false && r.chosen === null).length;
-            const tally = [wrong && `sai ${wrong}`, blank && `bỏ trống ${blank}`].filter(Boolean).join(', ');
-            return (
-              <div key={part}>
-                <div className="mb-2 flex items-baseline justify-between gap-3">
-                  <h3 className="font-medium">
-                    {PART_LABEL[part]} <span className="font-jp text-sm font-normal text-faint">{PART_JP[part]}</span>
-                  </h3>
-                  <p className="text-sm text-muted">{tally || (items.some((r) => r.correct === null) ? '' : 'đúng hết')}</p>
-                </div>
-                <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-12 lg:grid-cols-10 xl:grid-cols-12">
-                  {items.map((r) => {
-                    const q = questionIndex.get(r.id)?.q;
-                    const kind = markOf(r);
-                    return (
-                      <button
-                        key={r.id}
-                        onClick={() => setOpen(r.id)}
-                        aria-label={`Câu ${q?.no ?? '?'}: ${MARK_LABEL[kind]}`}
-                        className={`h-11 rounded-lg border text-sm font-semibold tabular-nums transition-colors ${MARK[kind]}`}
-                      >
-                        {q?.no ?? '?'}
-                      </button>
-                    );
-                  })}
-                </div>
+
+        <div id="result-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="pt-5">
+          {tab === 'marks' && (
+            <section>
+              <p className="text-sm text-muted">Câu đúng để chìm, câu cần xem lại mới tô màu. Chọn một câu để xem lời giải.</p>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
+                <Legend cls={MARK.wrong} label="Sai" />
+                <Legend cls={MARK.blank} label="Bỏ trống" />
+                <Legend cls={MARK.right} label="Đúng" />
+                <Legend cls={MARK.ungraded} label="Chưa có đáp án" />
               </div>
-            );
-          })}
+              <div className="mt-5 space-y-6">
+                {[...reviewByPart].map(([part, items]) => {
+                  const wrong = items.filter((r) => r.correct === false && r.chosen !== null).length;
+                  const blank = items.filter((r) => r.correct === false && r.chosen === null).length;
+                  const tally = [wrong && `sai ${wrong}`, blank && `bỏ trống ${blank}`].filter(Boolean).join(', ');
+                  return (
+                    <div key={part}>
+                      <div className="mb-2 flex items-baseline justify-between gap-3">
+                        <h3 className="font-medium">
+                          {PART_LABEL[part]} <span className="font-jp text-sm font-normal text-faint">{PART_JP[part]}</span>
+                        </h3>
+                        <p className="text-sm text-muted">{tally || (items.some((r) => r.correct === null) ? '' : 'đúng hết')}</p>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-12 lg:grid-cols-10 xl:grid-cols-12">
+                        {items.map((r) => {
+                          const q = questionIndex.get(r.id)?.q;
+                          const kind = markOf(r);
+                          return (
+                            <button
+                              key={r.id}
+                              onClick={() => setOpen(r.id)}
+                              aria-label={`Câu ${q?.no ?? '?'}: ${MARK_LABEL[kind]}`}
+                              className={`h-11 rounded-lg border text-sm font-semibold tabular-nums transition-colors ${MARK[kind]}`}
+                            >
+                              {q?.no ?? '?'}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+          {tab === 'explain' && (notes ? <ExplainTab exam={exam} review={result.review} notes={notesByMondai} /> : notesPending)}
+          {tab === 'words' && (notes ? <StudyList exam={exam} notes={notes} parts={attempt.parts} /> : notesPending)}
         </div>
-      </section>
+      </div>
 
       <div className="grid grid-cols-2 gap-3 lg:hidden">{actions}</div>
 
-      <Sheet
-        open={!!openReview}
-        onClose={() => setOpen(null)}
-        title={openReview ? `Câu ${questionIndex.get(openReview.id)?.q.label ?? questionIndex.get(openReview.id)?.q.no}` : ''}
-      >
-        {openReview && questionIndex.get(openReview.id) && (
-          <ReviewDetail review={openReview} {...questionIndex.get(openReview.id)!} />
-        )}
+      <Sheet open={!!opened} onClose={() => setOpen(null)} title={opened ? `Câu ${opened.q.label ?? opened.q.no}` : ''}>
+        {openReview && opened && <ReviewDetail review={openReview} q={opened.q} m={opened.m} notes={notesByMondai.get(opened.m.id)} />}
       </Sheet>
     </div>
   );
 }
-
-type Mark = 'right' | 'wrong' | 'blank' | 'ungraded';
 
 /** Right answers recede; what needs a second look carries the colour. */
 const MARK: Record<Mark, string> = {
@@ -365,13 +409,6 @@ const MARK: Record<Mark, string> = {
   blank: 'border-dashed border-bad-line bg-surface text-bad hover:border-bad',
   ungraded: 'border-dashed border-line-strong text-faint hover:border-muted',
 };
-const MARK_LABEL: Record<Mark, string> = { right: 'đúng', wrong: 'sai', blank: 'bỏ trống', ungraded: 'chưa có đáp án' };
-
-function markOf(r: QuestionReview): Mark {
-  if (r.correct === null) return 'ungraded';
-  if (r.correct) return 'right';
-  return r.chosen === null ? 'blank' : 'wrong';
-}
 
 function Legend({ cls, label }: { cls: string; label: string }) {
   return (
@@ -382,9 +419,8 @@ function Legend({ cls, label }: { cls: string; label: string }) {
   );
 }
 
-function ReviewDetail({ review, q, m }: { review: QuestionReview; q: PublicQuestion; m: PublicMondai }) {
+function ReviewDetail({ review, q, m, notes }: { review: QuestionReview; q: PublicQuestion; m: PublicMondai; notes?: MondaiNotes }) {
   const [showPassage, setShowPassage] = useState(false);
-  const choices = q.choices.length ? q.choices : Array.from({ length: q.choiceCount }, () => '');
   return (
     <div className="space-y-4">
       <p className="font-jp text-xs text-faint">
@@ -396,36 +432,14 @@ function ReviewDetail({ review, q, m }: { review: QuestionReview; q: PublicQuest
           <button className="text-sm font-medium text-accent" onClick={() => setShowPassage((v) => !v)}>
             {showPassage ? 'Ẩn đoạn văn' : 'Xem đoạn văn'}
           </button>
-          {showPassage &&
-            (m.passage ? (
-              <Markup text={m.passage} className="jp mt-2 block rounded-md bg-surface-2/60 p-3 font-mincho font-medium" />
-            ) : (
-              <img src={m.image} alt="" className="mt-2 w-full rounded-lg bg-white" />
-            ))}
+          {showPassage && (
+            <div className="mt-2 rounded-md bg-surface-2/60 p-3">
+              <PassagePair m={m} vi={notes?.passageVi} />
+            </div>
+          )}
         </div>
       )}
-      {q.stem && <Markup text={q.stem} className="jp block" />}
-      {q.image && <img src={q.image} alt="" className="w-full rounded-xl bg-white" />}
-      <div className="grid gap-2">
-        {choices.map((c, i) => {
-          const n = i + 1;
-          const isAnswer = review.answer === n;
-          const isChosen = review.chosen === n;
-          const ungraded = review.answer === null;
-          const cls = isAnswer ? 'border-good/60 bg-good/12' : isChosen ? (ungraded ? 'border-accent/60 bg-accent/10' : 'border-bad-line bg-bad-soft') : 'border-line';
-          return (
-            <div key={n} className={`flex min-h-11 items-center gap-3 rounded-xl border px-3 py-2 ${cls}`}>
-              <span className="grid size-7 shrink-0 place-items-center rounded-full border border-line-strong text-sm font-semibold">{n}</span>
-              {c ? <Markup text={c} className="jp min-w-0 flex-1 leading-[1.9]" /> : <span className="flex-1" />}
-              {isAnswer && <span className="text-xs font-semibold text-good">Đáp án</span>}
-              {isChosen && !isAnswer && <span className={`text-xs font-semibold ${ungraded ? 'text-accent' : 'text-bad'}`}>Bạn chọn</span>}
-            </div>
-          );
-        })}
-      </div>
-      {review.chosen === null && <p className="text-sm text-bad">Bạn chưa chọn câu này.</p>}
-      {review.answer === null && <p className="text-sm text-warn">Câu này chưa có đáp án.</p>}
-      <p className="rounded-xl border border-dashed border-line p-3 text-sm text-faint">Giải thích sẽ được bổ sung sau.</p>
+      <QuestionExplained q={q} review={review} notes={notes} />
     </div>
   );
 }

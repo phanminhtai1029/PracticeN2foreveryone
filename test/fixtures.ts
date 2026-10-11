@@ -1,4 +1,4 @@
-import type { Exam } from '../shared/types';
+import type { Exam, MondaiNotes } from '../shared/types';
 
 const q = (id: string, no: number, answer: number | null, choiceCount = 4) => ({
   id,
@@ -31,6 +31,29 @@ export function fixtureExam(listeningAnswers: (number | null)[] = [null, null]):
       },
     ],
   };
+}
+
+const note = (id: string, choices = 4) => ({ id, stemVi: `vi ${id}`, choices: Array.from({ length: choices }, (_, k) => ({ vi: `c${k + 1}`, why: 'w' })), explain: `why ${id}` });
+
+/** Notes for the vocab and reading 問題 of fixtureExam; grammar and listening have none. */
+export function fixtureNotes(): MondaiNotes[] {
+  return [
+    {
+      mondaiId: 'mv',
+      instructionVi: 'i',
+      questions: [note('v1'), note('v2')],
+      vocab: [{ word: '腕', reading: 'うで', hanViet: 'UYỂN', pos: 'N', meaning: 'cánh tay', level: 'N3', q: [1] }],
+      grammar: [],
+    },
+    {
+      mondaiId: 'mr',
+      instructionVi: 'i',
+      passageVi: 'p',
+      questions: [note('r1')],
+      vocab: [],
+      grammar: [{ pattern: '〜ので', form: 'V + ので', meaning: 'vì', level: 'N5', example: 'e', exampleVi: 'v' }],
+    },
+  ];
 }
 
 export const ALL_RIGHT = { v1: 1, v2: 2, g1: 3, r1: 4 };

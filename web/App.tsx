@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage';
 import { ExamListPage } from './pages/ExamListPage';
 import { ExamSetupPage } from './pages/ExamSetupPage';
 import { TakeExamPage } from './pages/TakeExamPage';
+import { StudyPage } from './pages/StudyPage';
 import { ResultPage } from './pages/ResultPage';
 import { Spinner } from './components/ui';
 
@@ -35,6 +36,7 @@ export function App() {
         <Route path="/" element={<ExamListPage />} />
         <Route path="/exam/:examId" element={<ExamSetupPage />} />
         <Route path="/exam/:examId/take" element={<TakeExamPage />} />
+        <Route path="/exam/:examId/study" element={<StudyPage />} />
         <Route path="/result/:attemptId" element={<ResultPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
