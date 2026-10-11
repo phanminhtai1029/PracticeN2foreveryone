@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { gradeAttempt, toPublicExam, summarizeExam } from '../shared/scoring';
+import { gradeAttempt, passTotal, toPublicExam, summarizeExam } from '../shared/scoring';
 import { fixtureExam, ALL_RIGHT } from './fixtures';
 
 describe('gradeAttempt', () => {
@@ -77,5 +77,34 @@ describe('toPublicExam / summarizeExam', () => {
       reading: { questions: 1 },
       listening: { questions: 2 },
     });
+  });
+});
+
+describe('pass mark by level', () => {
+  // 10 questions per section: language 5/10 -> 30, reading 5/10 -> 30, listening 6/10 -> 36, total 96
+  const exam = (level: string) => {
+    const qs = (p: string) => Array.from({ length: 10 }, (_, i) => ({ id: `${p}${i}`, no: i + 1, stem: '', choices: ['a', 'b', 'c', 'd'], choiceCount: 4, answer: 1 }));
+    return {
+      id: 'lv', title: 'Level', level, timeLimits: { languageReading: 6300 },
+      mondai: [
+        { id: 'v', part: 'vocab' as const, number: 1, instruction: '', weight: 1, questions: qs('v').slice(0, 5) },
+        { id: 'g', part: 'grammar' as const, number: 7, instruction: '', weight: 1, questions: qs('g').slice(0, 5) },
+        { id: 'r', part: 'reading' as const, number: 10, instruction: '', weight: 1, questions: qs('r') },
+        { id: 'l', part: 'listening' as const, number: 1, instruction: '', weight: 1, questions: qs('l') },
+      ],
+    };
+  };
+  const right = (p: string, n: number) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`${p}${i}`, 1]));
+  const answers = { ...right('v', 5), ...right('r', 5), ...right('l', 6) };
+  const grade = (level: string) => gradeAttempt(exam(level), ['vocab', 'grammar', 'reading', 'listening'], answers);
+
+  it('uses 100 for N1, 90 for N2, 95 for N3, and 90 for an unknown level', () => {
+    expect([passTotal('N1'), passTotal('N2'), passTotal('N3'), passTotal('??')]).toEqual([100, 90, 95, 90]);
+  });
+
+  it('the same 96 points pass N2 and N3 but fail N1', () => {
+    expect(grade('N2')).toMatchObject({ total: 96, status: 'pass' });
+    expect(grade('N3')).toMatchObject({ total: 96, status: 'pass' });
+    expect(grade('N1')).toMatchObject({ total: 96, status: 'fail' });
   });
 });

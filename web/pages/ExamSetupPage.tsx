@@ -102,7 +102,7 @@ export function ExamSetupPage() {
         <Icon name="arrow" className="size-5 text-accent" />
       </button>
 
-      <h2 className="mt-8 mb-3 text-sm font-medium tracking-wide text-muted uppercase">Hoặc chọn phần luyện</h2>
+      <h2 className="mt-8 mb-3 font-semibold">Hoặc chọn phần luyện</h2>
       <div className="grid grid-cols-2 gap-3">
         {PARTS.map((p) => {
           const n = exam.parts[p].questions;

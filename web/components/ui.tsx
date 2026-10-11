@@ -1,25 +1,27 @@
 import { useEffect, type ReactNode } from 'react';
+import { ArrowRight, Book, Check, ChevronLeft, Clock, Headphones, History, LayoutGrid, LogOut, Play, X } from 'lucide-react';
+import { AnimatePresence, m } from 'motion/react';
 
-const paths = {
-  back: 'M15 18l-6-6 6-6',
-  grid: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
-  clock: 'M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z',
-  logout: 'M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3M16 17l5-5-5-5M21 12H9',
-  check: 'M5 12.5l4.5 4.5L19 7.5',
-  x: 'M6 6l12 12M18 6L6 18',
-  headphones: 'M4 15v-3a8 8 0 0 1 16 0v3M4 15a2 2 0 0 1 2-2h1v7H6a2 2 0 0 1-2-2zM20 15a2 2 0 0 0-2-2h-1v7h1a2 2 0 0 0 2-2z',
-  play: 'M7 5l12 7-12 7z',
-  book: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5',
-  arrow: 'M5 12h14M13 6l6 6-6 6',
-  history: 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 8v4l3 2',
+/** The product name lives here only. 練習帳 = exercise book. */
+export const APP_NAME = { jp: '練習帳', vi: 'Luyện tập tiếng Nhật' } as const;
+
+const icons = {
+  back: ChevronLeft,
+  grid: LayoutGrid,
+  clock: Clock,
+  logout: LogOut,
+  check: Check,
+  x: X,
+  headphones: Headphones,
+  play: Play,
+  book: Book,
+  arrow: ArrowRight,
+  history: History,
 } as const;
 
-export function Icon({ name, className = 'size-5' }: { name: keyof typeof paths; className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-      <path d={paths[name]} />
-    </svg>
-  );
+export function Icon({ name, className = 'size-5' }: { name: keyof typeof icons; className?: string }) {
+  const Glyph = icons[name];
+  return <Glyph className={className} aria-hidden />;
 }
 
 export function Spinner({ full = false }: { full?: boolean }) {
@@ -53,23 +55,40 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
       document.body.style.overflow = prev;
     };
   }, [open, onClose]);
-  if (!open) return null;
+  // AnimatePresence keeps the last rendered sheet mounted while it animates out, so callers can clear their state at once.
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative max-h-[88dvh] w-full overflow-y-auto rounded-t-3xl border border-line bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:max-w-lg sm:rounded-3xl">
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line-strong sm:hidden" />
-        {title && (
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">{title}</h2>
-            <button className="grid size-9 place-items-center rounded-full text-muted hover:bg-surface-2" onClick={onClose} aria-label="Đóng">
-              <Icon name="x" />
-            </button>
-          </div>
-        )}
-        {children}
-      </div>
-    </div>
+    <AnimatePresence>
+      {open && (
+        <m.div key="sheet" className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal exit={{ opacity: 1 }}>
+          <m.div
+            className="absolute inset-0 bg-ink/45 backdrop-blur-[2px]"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+          />
+          <m.div
+            className="relative max-h-[88dvh] w-full overflow-y-auto rounded-t-3xl border border-line bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:max-w-lg sm:rounded-3xl"
+            initial={{ opacity: 0, y: 32 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 32 }}
+            transition={{ duration: 0.22, ease: [0.2, 0.7, 0.2, 1] }}
+          >
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line-strong sm:hidden" />
+            {title && (
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold">{title}</h2>
+                <button className="grid size-9 place-items-center rounded-full text-muted hover:bg-surface-2" onClick={onClose} aria-label="Đóng">
+                  <Icon name="x" />
+                </button>
+              </div>
+            )}
+            {children}
+          </m.div>
+        </m.div>
+      )}
+    </AnimatePresence>
   );
 }
 

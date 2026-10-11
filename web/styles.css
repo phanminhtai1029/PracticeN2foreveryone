@@ -1,27 +1,39 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-bg: #0d0f13;
-  --color-surface: #15181e;
-  --color-surface-2: #1c2028;
-  --color-line: #262b35;
-  --color-line-strong: #353b48;
-  --color-ink: #e9ebf0;
-  --color-muted: #9aa1ae;
-  --color-faint: #687080;
-  --color-accent: #8fb0ff;
-  --color-accent-ink: #0d0f13;
-  --color-good: #5fd49b;
-  --color-bad: #ff7d7d;
-  --color-warn: #f3b955;
+  /*
+   * Paper theme. Three inks carry the meaning:
+   *   sumi (ink)      what is printed: text, rules, scores at or above the pass mark
+   *   ruri-kon (accent) what the learner writes: selections, links, progress, primary actions
+   *   shu (vermilion) what the grader adds: the stamp, wrong answers, scores below the pass mark
+   * Neutrals are Radix Colors 3.0 slate (light); text greys are darkened until they pass 4.5:1 on every surface below.
+   */
+  --color-bg: #f0f0f3; /* slate 3, the desk */
+  --color-surface: #fcfcfd; /* slate 1, a sheet of paper */
+  --color-surface-2: #e8e8ec; /* slate 4, fills on a sheet or on the desk */
+  --color-line: #d9d9e0; /* slate 6 */
+  --color-line-strong: #b9bbc6; /* slate 8 */
+  --color-ink: #1c2024; /* slate 12 */
+  --color-muted: #50545b;
+  --color-faint: #62666e;
+  --color-accent: #19448e; /* 瑠璃紺 ruri-kon, blue-black pen ink */
+  --color-accent-ink: #ffffff;
+  --color-good: #1a7058; /* jade 11, darkened */
+  --color-bad: #b52a0f; /* tomato 11, darkened: small text */
+  --color-bad-soft: #feebe7; /* tomato 3 */
+  --color-bad-line: #ec8e7b; /* tomato 8 */
+  --color-warn: #8f5400; /* amber 11, darkened */
+  --color-shu: #e54d2e; /* tomato 9: stamp ink and large marks only (under 4.5:1 on paper) */
 
   --font-sans: 'Be Vietnam Pro', 'Noto Sans JP', system-ui, sans-serif;
   --font-jp: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  /* No Vietnamese glyphs: Japanese and digits only. */
+  --font-mincho: 'Shippori Mincho', 'Noto Serif JP', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
 }
 
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: light;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
   }
@@ -74,7 +86,7 @@
 }
 
 @utility card {
-  @apply rounded-2xl border border-line bg-surface;
+  @apply rounded-md border border-line bg-surface shadow-[0_1px_2px_rgb(28_32_36/0.06),0_8px_20px_-12px_rgb(28_32_36/0.18)];
 }
 @utility btn {
   @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[15px] font-semibold transition active:scale-[0.98] disabled:opacity-40;

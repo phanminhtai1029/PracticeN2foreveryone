@@ -1,6 +1,6 @@
-# N2 Luyện đề
+# 練習帳 · Luyện tập tiếng Nhật
 
-Web luyện đề JLPT N2 (thay study4): đăng nhập, chọn đề, luyện theo phần (Từ vựng / Ngữ pháp / Đọc hiểu / Nghe hiểu) hoặc làm full đề, xem kết quả quy đổi điểm. Mobile-first, chỉ dark mode.
+Web luyện đề JLPT N2 (thay study4): đăng nhập, chọn đề, luyện theo phần (Từ vựng / Ngữ pháp / Đọc hiểu / Nghe hiểu) hoặc làm full đề, xem kết quả quy đổi điểm. Mobile-first, giao diện sáng kiểu giấy (chưa có dark mode).
 
 Stack: React + Vite · Hono trên Cloudflare Workers · D1 (SQLite) · R2 (audio). Khi chạy local, `@cloudflare/vite-plugin` giả lập Workers/D1/R2 ngay trên máy (dữ liệu nằm trong `.wrangler/state`) — không cần tài khoản Cloudflare.
 

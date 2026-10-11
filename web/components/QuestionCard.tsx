@@ -16,11 +16,10 @@ export const QuestionCard = memo(function QuestionCard({ q, chosen, active = fal
   // Short choices (vocab readings, kanji) fit a 2×2 grid; sentences stay one per row.
   const compact = textChoices && q.choices.every((c) => markupToText(c).length <= 9);
   return (
-    <article id={`q-${q.id}`} className={`card scroll-mt-48 p-4 transition sm:p-5 ${active ? 'border-accent/70 ring-2 ring-accent/25' : ''}`}>
+    <article id={`q-${q.id}`} className={`scroll-mt-48 p-4 transition-colors sm:p-5 ${active ? 'bg-accent/8 shadow-[inset_3px_0_0_var(--color-accent)]' : ''}`}>
       <div className="flex gap-3">
-        <span
-          className={`mt-1 grid h-7 min-w-7 shrink-0 place-items-center rounded-lg px-1.5 text-sm font-semibold tabular-nums ${chosen ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-muted'}`}
-        >
+        {/* boxed number, as printed in the booklet; the learner's mark goes on the choice */}
+        <span className="mt-1 grid h-7 min-w-7 shrink-0 place-items-center rounded-[4px] border border-ink px-1.5 text-sm font-semibold tabular-nums">
           {label}
         </span>
         {q.stem ? (
@@ -44,7 +43,7 @@ export const QuestionCard = memo(function QuestionCard({ q, chosen, active = fal
                 key={n}
                 onClick={() => onChoose(q.id, n)}
                 aria-pressed={on}
-                className={`flex min-h-12 items-center gap-3 rounded-xl border px-3 py-2 text-left transition ${on ? 'border-accent bg-accent/12' : 'border-line bg-surface-2/60 hover:border-line-strong'}`}
+                className={`flex min-h-12 items-center rounded-xl border py-2 text-left transition ${compact ? 'gap-2 px-2.5' : 'gap-3 px-3'} ${on ? 'border-accent bg-accent/12' : 'border-line hover:border-line-strong hover:bg-surface-2/50'}`}
               >
                 <span className={`grid size-7 shrink-0 place-items-center rounded-full text-sm font-semibold ${on ? 'bg-accent text-accent-ink' : 'border border-line-strong text-muted'}`}>{n}</span>
                 <Markup text={c} className="jp min-w-0 flex-1 leading-[1.9]" />
@@ -62,7 +61,7 @@ export const QuestionCard = memo(function QuestionCard({ q, chosen, active = fal
                 onClick={() => onChoose(q.id, n)}
                 aria-pressed={on}
                 aria-label={`Đáp án ${n}`}
-                className={`h-12 flex-1 rounded-xl border text-lg font-semibold transition ${on ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-surface-2/60 text-muted hover:border-line-strong'}`}
+                className={`h-12 flex-1 rounded-xl border text-lg font-semibold transition ${on ? 'border-accent bg-accent text-accent-ink' : 'border-line text-muted hover:border-line-strong hover:bg-surface-2/50'}`}
               >
                 {n}
               </button>

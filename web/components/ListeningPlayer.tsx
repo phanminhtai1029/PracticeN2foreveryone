@@ -110,7 +110,7 @@ export function ListeningPlayer({ src, durationSec, startPos, started, nowLabel,
           </button>
         )}
       </div>
-      <div className="h-1 bg-surface-2">
+      <div className="h-1 bg-line">
         <div className="h-full bg-accent transition-[width] duration-700 ease-linear" style={{ width: `${pct}%` }} />
       </div>
     </div>

@@ -12,7 +12,9 @@ import {
   type QuestionReview,
 } from './types';
 
-export const PASS_TOTAL = 90;
+/** Overall pass mark out of 180. N1-N3 share the three 60-point sections; N4/N5 are scored in two sections and are not supported yet. */
+const PASS_TOTAL_BY_LEVEL: Record<string, number> = { N1: 100, N2: 90, N3: 95 };
+export const passTotal = (level: string) => PASS_TOTAL_BY_LEVEL[level] ?? 90;
 export const PASS_GROUP_MIN = 19;
 export const GROUP_MAX = 60;
 
@@ -79,7 +81,7 @@ export function gradeAttempt(exam: Exam, parts: Part[], answers: Answers): Attem
   const status: AttemptResult['status'] =
     total === null
       ? 'provisional'
-      : total >= PASS_TOTAL && groups.every((g) => (g.scaled ?? 0) >= PASS_GROUP_MIN)
+      : total >= passTotal(exam.level) && groups.every((g) => (g.scaled ?? 0) >= PASS_GROUP_MIN)
         ? 'pass'
         : 'fail';
 

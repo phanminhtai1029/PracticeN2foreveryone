@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams } from 'react-router';
 import type { Part, PublicExam, PublicMondai } from '../../shared/types';
 import { PART_JP, PART_LABEL } from '../../shared/types';
 import { api } from '../api';
+import { AnswerSheet } from '../components/AnswerSheet';
 import { MondaiBlock } from '../components/MondaiBlock';
 import { ListeningPlayer } from '../components/ListeningPlayer';
 import { QuestionNav } from '../components/QuestionNav';
@@ -90,7 +91,11 @@ function ExamRunner({
   const unansweredTotal = allQuestions.filter((q) => !attempt.answers[q.id]).length;
 
   const onChoose = useCallback(
-    (id: string, n: number) => update((a) => ({ ...a, answers: { ...a.answers, [id]: n } })),
+    (id: string, n: number) => {
+      update((a) => ({ ...a, answers: { ...a.answers, [id]: n } }));
+      // keep the row just marked in view on the side answer sheet (a no-op while that sheet is hidden)
+      requestAnimationFrame(() => document.querySelector(`aside [data-q="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'nearest' }));
+    },
     [update],
   );
 
@@ -158,12 +163,15 @@ function ExamRunner({
   }, [stageMondai]);
 
   const isLastStage = attempt.stage === 'listening' || !hasListening;
+  const finishLabel = isLastStage ? 'Nộp bài' : 'Sang phần Nghe';
+  const askToFinish = () => setConfirm(isLastStage ? 'submit' : 'listening');
+  const progress = (answeredInStage / Math.max(1, stageQuestions.length)) * 100;
   const clock = countdown ? remainingSec : (now - attempt.startedAt) / 1000;
 
   return (
-    <div className="min-h-dvh pb-28">
+    <div className="min-h-dvh pb-28 xl:pb-12">
       <header className="sticky top-0 z-30 border-b border-line/70 bg-bg/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-4">
           <button
             onClick={() => navigate(`/exam/${exam.id}`)}
             className="-ml-2 grid size-10 place-items-center rounded-full text-muted hover:bg-surface-2"
@@ -185,14 +193,14 @@ function ExamRunner({
           </div>
           <button
             onClick={() => setNavOpen(true)}
-            className="grid size-10 place-items-center rounded-full text-muted hover:bg-surface-2"
-            aria-label="Danh sách câu hỏi"
+            className="grid size-10 place-items-center rounded-full text-muted hover:bg-surface-2 xl:hidden"
+            aria-label="Phiếu trả lời"
           >
             <Icon name="grid" />
           </button>
         </div>
         {partsInStage.length > 1 && (
-          <nav className="no-scrollbar mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-2">
+          <nav className="no-scrollbar mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 pb-2">
             {partsInStage.map((p) => (
               <button
                 key={p}
@@ -209,26 +217,55 @@ function ExamRunner({
         )}
       </header>
 
-      <main className="mx-auto max-w-6xl px-4">
-        {attempt.stage === 'listening' && exam.audio && (
-          <div className="sticky top-[3.6rem] z-20 -mx-4 bg-bg/90 px-4 pt-3 pb-2 backdrop-blur">
-            <ListeningPlayer
-              src={api.audioUrl(exam.audio.key)}
-              durationSec={exam.audio.durationSec}
-              startPos={attempt.audioPos}
-              started={attempt.listeningStarted}
-              nowLabel={activeLabel}
-              onStart={() => update((a) => ({ ...a, listeningStarted: true }))}
-              onTick={(pos) => update((a) => ({ ...a, audioPos: pos }))}
-              onEnded={() => setConfirm('submit')}
-            />
+      <main className="mx-auto max-w-7xl px-4 xl:grid xl:grid-cols-[minmax(0,1fr)_15.5rem] xl:items-start xl:gap-8">
+        <div>
+          {attempt.stage === 'listening' && exam.audio && (
+            <div className="sticky top-[3.6rem] z-20 -mx-4 bg-bg/90 px-4 pt-3 pb-2 backdrop-blur">
+              <ListeningPlayer
+                src={api.audioUrl(exam.audio.key)}
+                durationSec={exam.audio.durationSec}
+                startPos={attempt.audioPos}
+                started={attempt.listeningStarted}
+                nowLabel={activeLabel}
+                onStart={() => update((a) => ({ ...a, listeningStarted: true }))}
+                onTick={(pos) => update((a) => ({ ...a, audioPos: pos }))}
+                onEnded={() => setConfirm('submit')}
+              />
+            </div>
+          )}
+          <Stage mondai={stageMondai} answers={attempt.answers} activeId={activeId} onChoose={onChoose} />
+        </div>
+
+        {/* wide screens keep the answer sheet beside the booklet, as on the exam desk */}
+        <aside className={`card mt-6 hidden flex-col xl:sticky xl:flex ${partsInStage.length > 1 ? 'xl:top-28 xl:max-h-[calc(100dvh-8rem)]' : 'xl:top-[4.5rem] xl:max-h-[calc(100dvh-5.5rem)]'}`}>
+          <div className="border-b border-line px-4 pt-3 pb-3">
+            <h2>
+              <span className="font-mincho font-extrabold" lang="ja">
+                解答用紙
+              </span>{' '}
+              <span className="text-sm text-muted">Phiếu trả lời</span>
+            </h2>
+            <p className="mt-1 text-sm text-muted tabular-nums">
+              Đã làm <span className="font-semibold text-ink">{answeredInStage}</span>/{stageQuestions.length}
+            </p>
+            <div className="mt-2 h-1 bg-line">
+              <div className="h-full bg-accent transition-all" style={{ width: `${progress}%` }} />
+            </div>
           </div>
-        )}
-        <Stage mondai={stageMondai} answers={attempt.answers} activeId={activeId} onChoose={onChoose} />
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+            <AnswerSheet mondai={stageMondai} answers={attempt.answers} activeId={activeId} onJump={scrollToQuestion} />
+          </div>
+          <div className="border-t border-line p-3">
+            <button className="btn-primary w-full" onClick={askToFinish}>
+              {finishLabel}
+              <Icon name="arrow" className="size-4" />
+            </button>
+          </div>
+        </aside>
       </main>
 
-      <footer className="fixed inset-x-0 bottom-0 z-30 border-t border-line/70 bg-bg/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <footer className="fixed inset-x-0 bottom-0 z-30 border-t border-line/70 bg-bg/90 backdrop-blur xl:hidden">
+        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <button onClick={() => setNavOpen(true)} className="text-left">
             <p className="text-xs text-muted">Đã làm</p>
             <p className="font-semibold tabular-nums">
@@ -236,11 +273,11 @@ function ExamRunner({
               <span className="text-muted">/{stageQuestions.length}</span>
             </p>
           </button>
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
-            <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${(answeredInStage / Math.max(1, stageQuestions.length)) * 100}%` }} />
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-line">
+            <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress}%` }} />
           </div>
-          <button className="btn-primary" onClick={() => setConfirm(isLastStage ? 'submit' : 'listening')}>
-            {isLastStage ? 'Nộp bài' : 'Sang phần Nghe'}
+          <button className="btn-primary" onClick={askToFinish}>
+            {finishLabel}
             <Icon name="arrow" className="size-4" />
           </button>
         </div>
@@ -251,6 +288,7 @@ function ExamRunner({
         onClose={() => setNavOpen(false)}
         mondai={stageMondai}
         answers={attempt.answers}
+        activeId={activeId}
         onJump={(id) => {
           setNavOpen(false);
           setTimeout(() => scrollToQuestion(id), 50);
