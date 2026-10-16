@@ -75,6 +75,10 @@ function contextOf(v: VocabNote, m: PublicMondai): string {
   return '';
 }
 
+/** The exam as a tag and file name prefix, e.g. "N2-2024-07"; ids that already start with the level keep it once. */
+export const examTag = (exam: Pick<PublicExam, 'id' | 'level'>) =>
+  exam.id.toUpperCase().startsWith(`${exam.level}-`) ? exam.id.toUpperCase() : `${exam.level}-${exam.id}`;
+
 const sourceOf = (exam: PublicExam, m: PublicMondai, q?: number[]) =>
   `${exam.title}, 問題${m.number}${m.title ?? ''}${q?.length ? `, câu ${q.join(', ')}` : ''}`;
 
@@ -84,7 +88,7 @@ export function collectAnkiNotes(exam: PublicExam, notes: StudyNotes[], sel: Ank
   const out: Record<AnkiKind, AnkiNote[]> = { vocab: [], grammar: [] };
   const seen = new Set<string>();
   const wanted = (level: Level) => !sel.levels.length || sel.levels.includes(level);
-  const tagsOf = (m: PublicMondai, level: Level, kind: AnkiKind) => ['練習帳', `${exam.level}-${exam.id}`, level, kind === 'vocab' ? '語彙' : '文法', `出題-${PART_JP[m.part].replace('・', '')}`];
+  const tagsOf = (m: PublicMondai, level: Level, kind: AnkiKind) => ['練習帳', examTag(exam), level, kind === 'vocab' ? '語彙' : '文法', `出題-${PART_JP[m.part].replace('・', '')}`];
 
   for (const m of exam.mondai) {
     const n = byMondai.get(m.id);

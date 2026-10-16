@@ -1,6 +1,6 @@
 # 練習帳 · Luyện tập tiếng Nhật
 
-Web luyện đề JLPT N2 (thay study4): đăng nhập, chọn đề, luyện theo phần (Từ vựng / Ngữ pháp / Đọc hiểu / Nghe hiểu) hoặc làm full đề, xem kết quả quy đổi điểm. Mobile-first, giao diện sáng kiểu giấy (chưa có dark mode).
+Web luyện đề JLPT N2 và N4 (thay study4): đăng nhập, chọn đề, luyện theo phần (Từ vựng / Ngữ pháp / Đọc hiểu / Nghe hiểu) hoặc làm full đề, xem kết quả quy đổi điểm. Mobile-first, giao diện sáng kiểu giấy (chưa có dark mode).
 
 Stack: React + Vite · Hono trên Cloudflare Workers · D1 (SQLite) · R2 (audio). Khi chạy local, `@cloudflare/vite-plugin` giả lập Workers/D1/R2 ngay trên máy (dữ liệu nằm trong `.wrangler/state`) — không cần tài khoản Cloudflare.
 
@@ -54,6 +54,8 @@ npm run assets:upload -- <id> --remote                  # ảnh của đề
 2. `npm run db:seed`
 3. Nếu có file nghe: `npm run audio:upload -- <file.mp3> <id>/listening.mp3` và khai báo `"audio": { "key": "<id>/listening.mp3", "durationSec": … }`.
 
+**Chấm điểm theo cấp độ** (`sectionsOf` trong `shared/scoring.ts`): N1–N3 có ba phần 60 điểm (言語知識, 読解, 聴解; sàn 19 mỗi phần). N4–N5 có hai phần: 言語知識・読解 120 điểm (sàn 38) và 聴解 60 điểm (sàn 19). Mốc đỗ tổng: N1 100, N2 90, N3 95, N4 90, N5 80.
+
 ## Lời giải và sổ từ của đề
 
 Sau khi nộp bài, trang kết quả có thêm tab **解説 Giải thích** (bản dịch, lý do từng đáp án đúng/sai) và **語彙・文法 Từ và ngữ pháp**. Sổ từ cũng mở được trước khi làm, từ trang chọn phần thi.
@@ -67,7 +69,7 @@ npm run db:seed                # nạp đề kèm ghi chú (thêm --remote cho p
 
 **Xuất sang Anki:** trong sổ từ có nút "Xuất sang Anki", chọn cả đề hoặc một phần, loại thẻ (từ vựng, ngữ pháp) và cấp độ rồi tải file `.apkg`. File được tạo ngay trong trình duyệt (`shared/anki.ts` gom thẻ, `shared/apkg.ts` ghi file bằng sql.js). Thẻ vào bộ `練習帳::<tên đề>::語彙` và `::文法`; mỗi từ chỉ có một thẻ dù xuất hiện ở nhiều bài hay nhiều đề, nên nhập lại không sinh thẻ trùng.
 
-問題 nào chưa có ghi chú (hiện là phần nghe) thì hai tab báo "chưa có lời giải". Cấp độ N5–N1 của từng từ là ước lượng.
+Câu nghe có thêm lời thoại (`script`, `scriptVi` trong ghi chú) hiện kèm bản dịch từng dòng. 問題 nào chưa có ghi chú (hiện là phần nghe của đề 12/2023) thì hai tab báo "chưa có lời giải". Cấp độ N5–N1 của từng từ là ước lượng.
 
 Đáp án đề 2023-12 do Claude tự giải (`answerVerified: false`) — nếu thấy sai, sửa `answer` trong `exam.json` rồi `npm run db:seed`.
 

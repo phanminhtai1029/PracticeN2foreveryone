@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { collectAnkiNotes, type AnkiKind } from '../../shared/anki';
+import { collectAnkiNotes, examTag, type AnkiKind } from '../../shared/anki';
 import type { Level, Part, PublicExam, StudyNotes } from '../../shared/types';
 import { LEVELS, PART_JP, PART_LABEL } from '../../shared/types';
 import { downloadApkg } from '../ankiExport';
@@ -36,7 +36,7 @@ export function AnkiExport({ exam, notes, available, initial }: Props) {
     [open, exam, notes, part, available, kinds, levels],
   );
   const total = picked.vocab.length + picked.grammar.length;
-  const filename = `${exam.level}-${exam.id}-${part ?? 'full'}${levels.length ? `-${LEVELS.filter((l) => levels.includes(l)).join('')}` : ''}.apkg`.toLowerCase();
+  const filename = `${examTag(exam)}-${part ?? 'full'}${levels.length ? `-${LEVELS.filter((l) => levels.includes(l)).join('')}` : ''}.apkg`.toLowerCase();
 
   const start = () => {
     setPart(initial.part);

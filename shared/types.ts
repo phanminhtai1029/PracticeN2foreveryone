@@ -1,16 +1,10 @@
 export type Part = 'vocab' | 'grammar' | 'reading' | 'listening';
-export type Group = 'language' | 'reading' | 'listening';
+/** a scored section of the score report; which ones an exam has depends on its level (see sectionsOf) */
+export type Group = 'language' | 'languageReading' | 'reading' | 'listening';
 
 export const PARTS: Part[] = ['vocab', 'grammar', 'reading', 'listening'];
-export const GROUPS: Group[] = ['language', 'reading', 'listening'];
 export const isFullExam = (parts: readonly Part[]) => PARTS.every((p) => parts.includes(p));
 
-export const PART_GROUP: Record<Part, Group> = {
-  vocab: 'language',
-  grammar: 'language',
-  reading: 'reading',
-  listening: 'listening',
-};
 
 export interface Question {
   id: string;
@@ -91,6 +85,10 @@ export interface QuestionNote {
   explain: string;
   /** the passage sentence the answer rests on */
   evidence?: string;
+  /** listening: what is said on the recording, one line per speaker turn */
+  script?: string;
+  /** line for line with script */
+  scriptVi?: string;
 }
 
 /** Translation, worked answers and word list for one 問題. Authored in content/exams/<id>/notes/*.json. */
@@ -194,6 +192,7 @@ export const PART_JP: Record<Part, string> = {
 
 export const GROUP_LABEL: Record<Group, string> = {
   language: '言語知識',
+  languageReading: '言語知識・読解',
   reading: '読解',
   listening: '聴解',
 };

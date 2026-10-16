@@ -2,15 +2,15 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { Link, useParams, useSearchParams } from 'react-router';
 import { animate, m, useMotionValue, useReducedMotion, useTransform } from 'motion/react';
 import type { AttemptDetail, AttemptResult, Group, MondaiNotes, Part, PartResult, PublicExam, PublicMondai, PublicQuestion, QuestionReview } from '../../shared/types';
-import { GROUPS, GROUP_LABEL, PART_GROUP, PART_JP, PART_LABEL, isFullExam } from '../../shared/types';
-import { GROUP_MAX, PASS_GROUP_MIN, passTotal } from '../../shared/scoring';
+import { GROUP_LABEL, PART_JP, PART_LABEL, isFullExam } from '../../shared/types';
+import { TOTAL_MAX, passTotal, sectionsOf, type Section } from '../../shared/scoring';
 import { api } from '../api';
 import { ExplainTab, MARK_LABEL, PassagePair, QuestionExplained, markOf, type Mark } from '../components/Explain';
 import { Layout } from '../components/Layout';
 import { StudyList } from '../components/StudyList';
 import { ErrorBox, Sheet, formatClock, formatDate } from '../components/ui';
 
-const GROUP_VI: Record<Group, string> = { language: 'Kiến thức ngôn ngữ', reading: 'Đọc hiểu', listening: 'Nghe hiểu' };
+const GROUP_VI: Record<Group, string> = { language: 'Kiến thức ngôn ngữ', languageReading: 'Ngôn ngữ và đọc hiểu', reading: 'Đọc hiểu', listening: 'Nghe hiểu' };
 
 /** The slip draws its bars and counts the score first; the verdict stamp lands once they settle. */
 const DRAW = 0.7;
@@ -180,12 +180,14 @@ function Row(props: { jp: string; vi: string; score: number | null; max: number;
   );
 }
 
-function verdict(result: AttemptResult, passMark: number) {
+function verdict(result: AttemptResult, passMark: number, sections: Section[]) {
   if (result.status === 'provisional' || result.total === null) return 'Chưa đủ đáp án để kết luận đỗ hay trượt.';
-  if (result.status === 'pass') return `Đỗ. Tổng điểm vượt mốc ${passMark} và cả ba phần đều từ ${PASS_GROUP_MIN} trở lên.`;
+  if (result.status === 'pass')
+    return `Đỗ. Tổng điểm vượt mốc ${passMark} và ${sections.length === 2 ? 'cả hai' : 'cả ba'} phần đều qua điểm sàn.`;
+  const minOf = (g: Group) => sections.find((s) => s.group === g)?.min ?? 0;
   const why = [
     ...(result.total < passMark ? [`tổng điểm thiếu ${passMark - result.total} so với mốc ${passMark}`] : []),
-    ...result.groups.filter((g) => g.scaled !== null && g.scaled < PASS_GROUP_MIN).map((g) => `${GROUP_VI[g.group]} dưới mốc ${PASS_GROUP_MIN}`),
+    ...result.groups.filter((g) => g.scaled !== null && g.scaled < minOf(g.group)).map((g) => `${GROUP_VI[g.group]} dưới mốc ${minOf(g.group)}`),
   ];
   return `Chưa đỗ: ${why.join(', ')}.`;
 }
@@ -194,12 +196,13 @@ function ScoreSlip({ attempt, exam }: { attempt: AttemptDetail; exam: PublicExam
   const { result } = attempt;
   const full = isFullExam(attempt.parts);
   const passMark = passTotal(exam.level);
+  const sections = sectionsOf(exam.level);
   const correct = result.parts.reduce((s, p) => s + p.correct, 0);
   const graded = result.parts.reduce((s, p) => s + p.total, 0);
   const duration = (attempt.submittedAt - attempt.startedAt) / 1000;
-  const partsOf = (g: Group) => result.parts.filter((p) => PART_GROUP[p.part] === g);
-  // part practice: a group only gets a scaled score when all of its parts were taken (e.g. vocab + grammar)
-  const covered = (g: Group) => Object.entries(PART_GROUP).every(([p, grp]) => grp !== g || attempt.parts.includes(p as Part));
+  const partsOf = (s: Section) => result.parts.filter((p) => s.parts.includes(p.part));
+  // part practice: a section only gets a scaled score when all of its parts were taken (e.g. vocab + grammar)
+  const covered = (s: Section) => s.parts.every((p) => attempt.parts.includes(p));
 
   return (
     <section className="card relative px-5 pt-5 pb-4 sm:px-7 sm:pt-6">
@@ -219,24 +222,25 @@ function ScoreSlip({ attempt, exam }: { attempt: AttemptDetail; exam: PublicExam
         </p>
         <p className="mt-1 flex items-baseline gap-1.5 font-mincho tabular-nums">
           <span className="text-7xl leading-none font-extrabold">{full ? result.total === null ? BLANK : <CountUp to={result.total} /> : graded ? <CountUp to={correct} /> : BLANK}</span>
-          <span className="text-xl text-muted">/{full ? GROUP_MAX * GROUPS.length : graded || '—'}</span>
+          <span className="text-xl text-muted">/{full ? TOTAL_MAX : graded || '—'}</span>
         </p>
         <div className="mt-4">
-          {full ? <Gauge value={result.total} max={GROUP_MAX * GROUPS.length} mark={passMark} /> : <Gauge value={correct} max={graded || 1} />}
+          {full ? <Gauge value={result.total} max={TOTAL_MAX} mark={passMark} /> : <Gauge value={correct} max={graded || 1} />}
         </div>
         <p className={`text-[15px] text-pretty ${full ? '' : 'mt-3'}`}>
-          {full ? verdict(result, passMark) : graded ? `Đúng ${Math.round((correct / graded) * 100)}% số câu đã có đáp án.` : 'Phần này chưa có đáp án để chấm.'}
+          {full ? verdict(result, passMark, sections) : graded ? `Đúng ${Math.round((correct / graded) * 100)}% số câu đã có đáp án.` : 'Phần này chưa có đáp án để chấm.'}
         </p>
       </div>
 
       <ul className="mt-6 divide-y divide-line border-y border-line">
-        {GROUPS.flatMap((g, i) => {
-          const parts = partsOf(g);
+        {sections.flatMap((s, i) => {
+          const g = s.group;
+          const parts = partsOf(s);
           if (!parts.length) return [];
-          if (full || covered(g)) {
+          if (full || covered(s)) {
             const gr = result.groups.find((x) => x.group === g);
             return [
-              <Row key={g} jp={GROUP_LABEL[g]} vi={GROUP_VI[g]} score={gr?.scaled ?? null} max={GROUP_MAX} mark={PASS_GROUP_MIN} order={i + 1} note={gr?.scaled === null && parts.every((p) => p.total > 0) ? gr.reason : undefined}>
+              <Row key={g} jp={GROUP_LABEL[g]} vi={GROUP_VI[g]} score={gr?.scaled ?? null} max={s.max} mark={s.min} order={i + 1} note={gr?.scaled === null && parts.every((p) => p.total > 0) ? gr.reason : undefined}>
                 {parts.map((p) => (
                   <PartLine key={p.part} p={p} named={parts.length > 1} />
                 ))}
@@ -258,7 +262,8 @@ function ScoreSlip({ attempt, exam }: { attempt: AttemptDetail; exam: PublicExam
       </ul>
 
       <p className="mt-3 text-xs leading-relaxed text-muted">
-        Vạch đứng là mốc đỗ: {full ? `tổng ${passMark}, ` : ''}mỗi phần {PASS_GROUP_MIN}. Điểm quy đổi ở đây chỉ là ước lượng, kỳ thi thật chuẩn hoá điểm theo cách khác.
+        Vạch đứng là mốc đỗ: {full ? `tổng ${passMark}, ` : ''}
+        {sections.every((s) => s.min === sections[0].min) ? `mỗi phần ${sections[0].min}` : sections.map((s) => `${GROUP_VI[s.group].toLowerCase()} ${s.min}`).join(', ')}. Điểm quy đổi ở đây chỉ là ước lượng, kỳ thi thật chuẩn hoá điểm theo cách khác.
       </p>
     </section>
   );

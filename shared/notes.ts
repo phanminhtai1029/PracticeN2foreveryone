@@ -38,6 +38,8 @@ export function validateNotes(exam: Exam, notes: MondaiNotes[]): string[] {
       if (!q.explain?.trim()) at(`${q.id}: explain is empty`);
       if (q.choices?.length !== src.choiceCount) at(`${q.id}: ${q.choices?.length ?? 0} choice notes, expected ${src.choiceCount}`);
       else if (q.choices.some((c) => !c.vi?.trim())) at(`${q.id}: a choice has no translation`);
+      if (!!q.script !== !!q.scriptVi) at(`${q.id}: script and scriptVi come together`);
+      else if (q.script && lines(q.script) !== lines(q.scriptVi!)) at(`${q.id}: scriptVi has ${lines(q.scriptVi!)} lines, the script has ${lines(q.script)}`);
     }
 
     const nos = new Set(m.questions.map((q) => q.no));

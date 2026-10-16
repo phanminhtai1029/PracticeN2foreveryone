@@ -47,6 +47,48 @@ export function PassagePair({ m, vi }: { m: PublicMondai; vi?: string }) {
   );
 }
 
+/** A speaker's label at the start of a script line, e.g. 女： or 店員： */
+const SPEAKER = /^([^：「」。、\s]{1,6})：/;
+
+function ScriptLine({ text, className }: { text: string; className: string }) {
+  const m = text.match(SPEAKER);
+  if (!m) return <Markup text={text} className={className} />;
+  return (
+    <span className={className}>
+      <span className="font-semibold text-muted">{m[1]}：</span>
+      <Markup text={text.slice(m[0].length)} />
+    </span>
+  );
+}
+
+/** What is said on the recording, each line followed by its translation. */
+function Script({ script, vi }: { script: string; vi: string }) {
+  const [showVi, setShowVi] = useState(true);
+  const jp = script.split('\n');
+  const lines = vi.split('\n');
+  return (
+    <details open className="rounded-xl border border-line px-3 py-2.5 sm:px-4">
+      <summary className="cursor-pointer text-sm font-medium">
+        <span lang="ja" className="mr-2 font-mincho font-bold">
+          スクリプト
+        </span>
+        Lời thoại
+      </summary>
+      <div className="mt-2.5 space-y-2">
+        {jp.map((line, i) => (
+          <p key={i}>
+            <ScriptLine text={line} className="jp block" />
+            {showVi && <ScriptLine text={lines[i] ?? ''} className="gloss block text-[15px] text-muted" />}
+          </p>
+        ))}
+      </div>
+      <button onClick={() => setShowVi((v) => !v)} className="mt-2 text-sm font-medium text-accent">
+        {showVi ? 'Ẩn bản dịch' : 'Hiện bản dịch'}
+      </button>
+    </details>
+  );
+}
+
 function Choices({ q, review, note }: { q: PublicQuestion; review: QuestionReview; note?: QuestionNote }) {
   const choices = q.choices.length ? q.choices : Array.from({ length: q.choiceCount }, () => '');
   return (
@@ -129,6 +171,7 @@ export function QuestionExplained({ q, review, notes }: { q: PublicQuestion; rev
         </div>
       )}
       {q.image && <img src={q.image} alt="" className="w-full rounded-xl bg-white sm:max-w-md" loading="lazy" />}
+      {note?.script && note.scriptVi && <Script script={note.script} vi={note.scriptVi} />}
       <Choices q={q} review={review} note={note} />
       {review.chosen === null && <p className="text-sm text-bad">Bạn chưa chọn câu này.</p>}
       {review.answer === null && <p className="text-sm text-warn">Câu này chưa có đáp án.</p>}

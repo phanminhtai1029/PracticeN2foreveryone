@@ -48,6 +48,32 @@ describe('gradeAttempt', () => {
     expect(r.status).toBe('fail');
   });
 
+  it('N4 merges language and reading into one section of 120 with its own minimum', () => {
+    const n4 = { ...fixtureExam([1, 2]), level: 'N4' };
+    const full = ['vocab', 'grammar', 'reading', 'listening'] as const;
+    const all = gradeAttempt(n4, [...full], { ...ALL_RIGHT, l1: 1, l2: 2 });
+    expect(all.groups).toEqual([
+      { group: 'languageReading', scaled: 120 },
+      { group: 'listening', scaled: 60 },
+    ]);
+    expect(all.status).toBe('pass');
+
+    // reading wrong: 4 of 7 weighted points → 69 of 120, listening 60 → 129, both above their minimums
+    const noReading = gradeAttempt(n4, [...full], { ...ALL_RIGHT, r1: 1, l1: 1, l2: 2 });
+    expect(noReading.groups[0].scaled).toBe(69);
+    expect(noReading.status).toBe('pass');
+
+    // listening wrong: 120 + 0 → total 120 ≥ 90, but listening is under 19
+    const noListening = gradeAttempt(n4, [...full], { ...ALL_RIGHT, l1: 2, l2: 1 });
+    expect(noListening.total).toBe(120);
+    expect(noListening.status).toBe('fail');
+
+    const partial = gradeAttempt(n4, ['vocab', 'grammar'], ALL_RIGHT);
+    expect(partial.groups[0]).toEqual({ group: 'languageReading', scaled: null, reason: 'Cần làm cả Từ vựng, Ngữ pháp và Đọc hiểu' });
+    expect(passTotal('N4')).toBe(90);
+    expect(passTotal('N5')).toBe(80);
+  });
+
   it('rounds scaled scores', () => {
     // language: v1 right (1) of max 1+1+2=4 → 15
     const r = gradeAttempt(fixtureExam(), ['vocab', 'grammar'], { v1: 1 });

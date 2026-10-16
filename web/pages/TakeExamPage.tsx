@@ -125,7 +125,7 @@ function ExamRunner({
     }
   }, [exam.id, attempt, navigate]);
 
-  // Full test: 言語知識・読解 has a hard 105-minute limit.
+  // Full test: 言語知識・読解 has a hard limit (105 minutes for N2, 80 for N4).
   const paperDeadline = attempt.paperStartedAt + exam.timeLimits.languageReading * 1000;
   const countdown = attempt.mode === 'full' && attempt.stage === 'paper';
   const remainingSec = (paperDeadline - now) / 1000;

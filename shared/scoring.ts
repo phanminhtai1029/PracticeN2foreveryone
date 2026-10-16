@@ -1,10 +1,10 @@
 import {
-  GROUPS,
   PARTS,
   type Answers,
   type AttemptResult,
   type Exam,
   type ExamSummary,
+  type Group,
   type GroupResult,
   type Part,
   type PartResult,
@@ -12,20 +12,34 @@ import {
   type QuestionReview,
 } from './types';
 
-/** Overall pass mark out of 180. N1-N3 share the three 60-point sections; N4/N5 are scored in two sections and are not supported yet. */
-const PASS_TOTAL_BY_LEVEL: Record<string, number> = { N1: 100, N2: 90, N3: 95 };
+/** A scored section of the score report, out of `max`, with its own minimum to pass. */
+export interface Section {
+  group: Group;
+  parts: Part[];
+  max: number;
+  min: number;
+}
+
+/** N1-N3 report three 60-point sections; N4 and N5 merge language knowledge and reading into one of 120. */
+const THREE_SECTIONS: Section[] = [
+  { group: 'language', parts: ['vocab', 'grammar'], max: 60, min: 19 },
+  { group: 'reading', parts: ['reading'], max: 60, min: 19 },
+  { group: 'listening', parts: ['listening'], max: 60, min: 19 },
+];
+const TWO_SECTIONS: Section[] = [
+  { group: 'languageReading', parts: ['vocab', 'grammar', 'reading'], max: 120, min: 38 },
+  { group: 'listening', parts: ['listening'], max: 60, min: 19 },
+];
+export const sectionsOf = (level: string): Section[] => (level === 'N4' || level === 'N5' ? TWO_SECTIONS : THREE_SECTIONS);
+
+/** Overall pass mark out of 180. */
+const PASS_TOTAL_BY_LEVEL: Record<string, number> = { N1: 100, N2: 90, N3: 95, N4: 90, N5: 80 };
 export const passTotal = (level: string) => PASS_TOTAL_BY_LEVEL[level] ?? 90;
-export const PASS_GROUP_MIN = 19;
-export const GROUP_MAX = 60;
+export const TOTAL_MAX = 180;
 
-const GROUP_PARTS = {
-  language: ['vocab', 'grammar'],
-  reading: ['reading'],
-  listening: ['listening'],
-} as const satisfies Record<string, Part[]>;
-
-const MISSING_PARTS_REASON = {
+const MISSING_PARTS_REASON: Record<Group, string> = {
   language: 'Cần làm cả Từ vựng và Ngữ pháp',
+  languageReading: 'Cần làm cả Từ vựng, Ngữ pháp và Đọc hiểu',
   reading: 'Chưa làm phần này',
   listening: 'Chưa làm phần này',
 };
@@ -65,15 +79,15 @@ export function gradeAttempt(exam: Exam, parts: Part[], answers: Answers): Attem
     }
   }
 
-  const groups: GroupResult[] = GROUPS.map((group) => {
-    const needed: readonly Part[] = GROUP_PARTS[group];
+  const sections = sectionsOf(exam.level);
+  const groups: GroupResult[] = sections.map(({ group, parts: needed, max: scale }) => {
     if (!needed.every((p) => selected.has(p))) return { group, scaled: null, reason: MISSING_PARTS_REASON[group] };
     const prs = needed.map((p) => partResults.get(p)).filter((p): p is PartResult => !!p);
     if (prs.some((p) => p.ungraded > 0)) return { group, scaled: null, reason: 'Chưa có đáp án' };
     const max = prs.reduce((s, p) => s + p.maxWeighted, 0);
     if (max === 0) return { group, scaled: null, reason: 'Chưa có câu hỏi' };
     const got = prs.reduce((s, p) => s + p.weighted, 0);
-    return { group, scaled: Math.round((got / max) * GROUP_MAX) };
+    return { group, scaled: Math.round((got / max) * scale) };
   });
 
   const complete = groups.every((g) => g.scaled !== null);
@@ -81,7 +95,7 @@ export function gradeAttempt(exam: Exam, parts: Part[], answers: Answers): Attem
   const status: AttemptResult['status'] =
     total === null
       ? 'provisional'
-      : total >= passTotal(exam.level) && groups.every((g) => (g.scaled ?? 0) >= PASS_GROUP_MIN)
+      : total >= passTotal(exam.level) && groups.every((g, i) => (g.scaled ?? 0) >= sections[i].min)
         ? 'pass'
         : 'fail';
 
