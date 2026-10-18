@@ -43,6 +43,34 @@ function readNotes(exam: Exam, dir: string): MondaiNotes[] {
 
 const sqlStr = (s: string) => `'${s.replace(/'/g, "''")}'`;
 const lines: string[] = [];
+
+/** D1 rejects statements over 100KB, so a long data_json goes in as an INSERT of its first piece and UPDATEs appending the rest. */
+const PIECE_BYTES = 60_000;
+function pieces(s: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let bytes = 0;
+  for (const ch of s) {
+    const b = Buffer.byteLength(ch);
+    if (bytes + b > PIECE_BYTES) {
+      out.push(cur);
+      cur = '';
+      bytes = 0;
+    }
+    cur += ch;
+    bytes += b;
+  }
+  out.push(cur);
+  return out;
+}
+function insertJson(table: string, keys: Record<string, string | number>, json: string) {
+  const [first, ...rest] = pieces(json);
+  const cols = Object.keys(keys);
+  const vals = Object.values(keys).map((v) => (typeof v === 'number' ? String(v) : sqlStr(v)));
+  lines.push(`INSERT INTO ${table} (${cols.join(', ')}, data_json) VALUES (${vals.join(', ')}, ${sqlStr(first)});`);
+  const where = cols.map((c, i) => `${c} = ${vals[i]}`).join(' AND ');
+  for (const p of rest) lines.push(`UPDATE ${table} SET data_json = data_json || ${sqlStr(p)} WHERE ${where};`);
+}
 for (const id of readdirSync(examsDir)) {
   const file = join(examsDir, id, 'exam.json');
   if (!existsSync(file)) continue;
@@ -56,11 +84,8 @@ for (const id of readdirSync(examsDir)) {
   lines.push(
     `INSERT INTO exams (id, title, level, sort_order, meta_json) VALUES (${sqlStr(exam.id)}, ${sqlStr(exam.title)}, ${sqlStr(exam.level)}, ${exam.sortOrder ?? 0}, ${sqlStr(JSON.stringify(meta))});`,
   );
-  mondai.forEach((m, ord) =>
-    lines.push(`INSERT INTO exam_mondai (exam_id, ord, data_json) VALUES (${sqlStr(exam.id)}, ${ord}, ${sqlStr(JSON.stringify(m))});`),
-  );
-  for (const n of notes)
-    lines.push(`INSERT INTO exam_notes (exam_id, mondai_id, data_json) VALUES (${sqlStr(exam.id)}, ${sqlStr(n.mondaiId)}, ${sqlStr(JSON.stringify(n))});`);
+  mondai.forEach((m, ord) => insertJson('exam_mondai', { exam_id: exam.id, ord }, JSON.stringify(m)));
+  for (const n of notes) insertJson('exam_notes', { exam_id: exam.id, mondai_id: n.mondaiId }, JSON.stringify(n));
   console.log(
     `✓ ${exam.id}: ${mondai.length} mondai, ${mondai.reduce((s, m) => s + m.questions.length, 0)} questions, notes for ${notes.length} mondai`,
   );

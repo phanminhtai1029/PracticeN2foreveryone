@@ -69,9 +69,9 @@ npm run db:seed                # nạp đề kèm ghi chú (thêm --remote cho p
 
 **Xuất sang Anki:** trong sổ từ có nút "Xuất sang Anki", chọn cả đề hoặc một phần, loại thẻ (từ vựng, ngữ pháp) và cấp độ rồi tải file `.apkg`. File được tạo ngay trong trình duyệt (`shared/anki.ts` gom thẻ, `shared/apkg.ts` ghi file bằng sql.js). Thẻ vào bộ `練習帳::<tên đề>::語彙` và `::文法`; mỗi từ chỉ có một thẻ dù xuất hiện ở nhiều bài hay nhiều đề, nên nhập lại không sinh thẻ trùng.
 
-Câu nghe có thêm lời thoại (`script`, `scriptVi` trong ghi chú) hiện kèm bản dịch từng dòng. 問題 nào chưa có ghi chú (hiện là phần nghe của đề 12/2023) thì hai tab báo "chưa có lời giải". Cấp độ N5–N1 của từng từ là ước lượng.
+Câu nghe có thêm lời thoại (`script`, `scriptVi` trong ghi chú) hiện kèm bản dịch từng dòng; script ghi furigana bằng markup `{漢字|かな}` như đề, người xem bật/tắt được. Mỗi câu nghe có nút nghe lại đúng đoạn audio của câu đó (từ `startSec` của câu tới mốc kế tiếp), kèm thanh điều khiển bám cuối cột để vừa nghe vừa dò script: lùi/tới 5 giây, tua, nghe chậm 0.85× và 0.7×. 問題 nào chưa có ghi chú thì hai tab báo "chưa có lời giải". Cấp độ N5–N1 của từng từ là ước lượng.
 
-Đáp án đề 2023-12 do Claude tự giải (`answerVerified: false`) — nếu thấy sai, sửa `answer` trong `exam.json` rồi `npm run db:seed`.
+Đáp án đề 2023-12 do Claude tự giải (`answerVerified: false`; phần nghe giải từ script của giáo viên, lưu ở `content/exams/2023-12/listening/script.json`) — nếu thấy sai, sửa `answer` trong `exam.json` rồi `npm run db:seed`.
 
 ## Cấu trúc
 

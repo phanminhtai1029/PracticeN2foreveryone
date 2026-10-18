@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { ArrowRight, Book, Check, ChevronLeft, Clock, Download, Headphones, History, LayoutGrid, LogOut, NotebookText, Play, Search, X } from 'lucide-react';
+import { ArrowRight, Book, Check, ChevronLeft, Clock, Download, Headphones, History, LayoutGrid, LogOut, NotebookText, Pause, Play, RotateCcw, RotateCw, Search, X } from 'lucide-react';
 import { AnimatePresence, m } from 'motion/react';
 
 /** The product name lives here only. 練習帳 = exercise book. */
@@ -14,6 +14,9 @@ const icons = {
   x: X,
   headphones: Headphones,
   play: Play,
+  pause: Pause,
+  back5: RotateCcw,
+  ahead5: RotateCw,
   book: Book,
   arrow: ArrowRight,
   history: History,

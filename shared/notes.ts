@@ -1,9 +1,6 @@
 import type { Exam, MondaiNotes } from './types';
 import { LEVELS } from './types';
 
-/** D1 rejects statements over 100KB; each 問題's notes travel as one INSERT. */
-const MAX_BYTES = 90_000;
-
 const lines = (s: string) => s.split('\n').length;
 
 /** Problems in one exam's notes, each prefixed with the 問題 or question it belongs to. Empty when the notes are sound. */
@@ -56,9 +53,6 @@ export function validateNotes(exam: Exam, notes: MondaiNotes[]): string[] {
       if (badQ(g.q)) at(`grammar[${i}] ${g.pattern}: q refers to a question outside this mondai`);
     });
     if (!Array.isArray(n.vocab) || !Array.isArray(n.grammar)) at('vocab and grammar must be arrays');
-
-    const bytes = new TextEncoder().encode(JSON.stringify(n)).length;
-    if (bytes > MAX_BYTES) at(`${bytes} bytes, over the ${MAX_BYTES} limit for one D1 statement`);
   }
   return errors;
 }

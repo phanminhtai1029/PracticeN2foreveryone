@@ -7,6 +7,7 @@ import { TOTAL_MAX, passTotal, sectionsOf, type Section } from '../../shared/sco
 import { api } from '../api';
 import { ExplainTab, MARK_LABEL, PassagePair, QuestionExplained, markOf, type Mark } from '../components/Explain';
 import { Layout } from '../components/Layout';
+import { ReviewAudioDock, ReviewAudioProvider } from '../components/ReviewAudio';
 import { StudyList } from '../components/StudyList';
 import { ErrorBox, Sheet, formatClock, formatDate } from '../components/ui';
 
@@ -322,88 +323,91 @@ function ResultView({ attempt, exam }: { attempt: AttemptDetail; exam: PublicExa
   );
 
   return (
-    <div className="space-y-8 lg:grid lg:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] lg:items-start lg:gap-12 lg:space-y-0">
-      <div className="lg:sticky lg:top-20">
-        <ScoreSlip attempt={attempt} exam={exam} />
-        <div className="mt-5 hidden grid-cols-2 gap-3 lg:grid">{actions}</div>
-      </div>
-
-      <div className="min-w-0">
-        <div className="sticky top-14 z-20 -mx-4 flex border-b border-line bg-bg/95 px-4 backdrop-blur lg:mx-0 lg:px-0" role="tablist" aria-label="Xem lại bài làm">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              role="tab"
-              id={`tab-${t.id}`}
-              aria-selected={tab === t.id}
-              aria-controls="result-panel"
-              onClick={() => setParams(t.id === 'marks' ? {} : { tab: t.id }, { replace: true })}
-              className={`-mb-px flex-1 border-b-2 px-1 pt-2.5 pb-2 text-center transition-colors sm:flex-none sm:px-5 ${tab === t.id ? 'border-ink text-ink' : 'border-transparent text-muted hover:text-ink'}`}
-            >
-              <span lang="ja" className="block font-mincho text-[17px] leading-tight font-bold">
-                {t.jp}
-              </span>
-              <span className="text-xs">{t.vi}</span>
-            </button>
-          ))}
+    <ReviewAudioProvider exam={exam}>
+      <div className="space-y-8 lg:grid lg:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] lg:items-start lg:gap-12 lg:space-y-0">
+        <div className="lg:sticky lg:top-20">
+          <ScoreSlip attempt={attempt} exam={exam} />
+          <div className="mt-5 hidden grid-cols-2 gap-3 lg:grid">{actions}</div>
         </div>
 
-        <div id="result-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="pt-5">
-          {tab === 'marks' && (
-            <section>
-              <p className="text-sm text-muted">Câu đúng để chìm, câu cần xem lại mới tô màu. Chọn một câu để xem lời giải.</p>
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
-                <Legend cls={MARK.wrong} label="Sai" />
-                <Legend cls={MARK.blank} label="Bỏ trống" />
-                <Legend cls={MARK.right} label="Đúng" />
-                <Legend cls={MARK.ungraded} label="Chưa có đáp án" />
-              </div>
-              <div className="mt-5 space-y-6">
-                {[...reviewByPart].map(([part, items]) => {
-                  const wrong = items.filter((r) => r.correct === false && r.chosen !== null).length;
-                  const blank = items.filter((r) => r.correct === false && r.chosen === null).length;
-                  const tally = [wrong && `sai ${wrong}`, blank && `bỏ trống ${blank}`].filter(Boolean).join(', ');
-                  return (
-                    <div key={part}>
-                      <div className="mb-2 flex items-baseline justify-between gap-3">
-                        <h3 className="font-medium">
-                          {PART_LABEL[part]} <span className="font-jp text-sm font-normal text-faint">{PART_JP[part]}</span>
-                        </h3>
-                        <p className="text-sm text-muted">{tally || (items.some((r) => r.correct === null) ? '' : 'đúng hết')}</p>
+        <div className="min-w-0">
+          <div className="sticky top-14 z-20 -mx-4 flex border-b border-line bg-bg/95 px-4 backdrop-blur lg:mx-0 lg:px-0" role="tablist" aria-label="Xem lại bài làm">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                role="tab"
+                id={`tab-${t.id}`}
+                aria-selected={tab === t.id}
+                aria-controls="result-panel"
+                onClick={() => setParams(t.id === 'marks' ? {} : { tab: t.id }, { replace: true })}
+                className={`-mb-px flex-1 border-b-2 px-1 pt-2.5 pb-2 text-center transition-colors sm:flex-none sm:px-5 ${tab === t.id ? 'border-ink text-ink' : 'border-transparent text-muted hover:text-ink'}`}
+              >
+                <span lang="ja" className="block font-mincho text-[17px] leading-tight font-bold">
+                  {t.jp}
+                </span>
+                <span className="text-xs">{t.vi}</span>
+              </button>
+            ))}
+          </div>
+
+          <div id="result-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="pt-5">
+            {tab === 'marks' && (
+              <section>
+                <p className="text-sm text-muted">Câu đúng để chìm, câu cần xem lại mới tô màu. Chọn một câu để xem lời giải.</p>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
+                  <Legend cls={MARK.wrong} label="Sai" />
+                  <Legend cls={MARK.blank} label="Bỏ trống" />
+                  <Legend cls={MARK.right} label="Đúng" />
+                  <Legend cls={MARK.ungraded} label="Chưa có đáp án" />
+                </div>
+                <div className="mt-5 space-y-6">
+                  {[...reviewByPart].map(([part, items]) => {
+                    const wrong = items.filter((r) => r.correct === false && r.chosen !== null).length;
+                    const blank = items.filter((r) => r.correct === false && r.chosen === null).length;
+                    const tally = [wrong && `sai ${wrong}`, blank && `bỏ trống ${blank}`].filter(Boolean).join(', ');
+                    return (
+                      <div key={part}>
+                        <div className="mb-2 flex items-baseline justify-between gap-3">
+                          <h3 className="font-medium">
+                            {PART_LABEL[part]} <span className="font-jp text-sm font-normal text-faint">{PART_JP[part]}</span>
+                          </h3>
+                          <p className="text-sm text-muted">{tally || (items.some((r) => r.correct === null) ? '' : 'đúng hết')}</p>
+                        </div>
+                        <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-12 lg:grid-cols-10 xl:grid-cols-12">
+                          {items.map((r) => {
+                            const q = questionIndex.get(r.id)?.q;
+                            const kind = markOf(r);
+                            return (
+                              <button
+                                key={r.id}
+                                onClick={() => setOpen(r.id)}
+                                aria-label={`Câu ${q?.no ?? '?'}: ${MARK_LABEL[kind]}`}
+                                className={`h-11 rounded-lg border text-sm font-semibold tabular-nums transition-colors ${MARK[kind]}`}
+                              >
+                                {q?.no ?? '?'}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-12 lg:grid-cols-10 xl:grid-cols-12">
-                        {items.map((r) => {
-                          const q = questionIndex.get(r.id)?.q;
-                          const kind = markOf(r);
-                          return (
-                            <button
-                              key={r.id}
-                              onClick={() => setOpen(r.id)}
-                              aria-label={`Câu ${q?.no ?? '?'}: ${MARK_LABEL[kind]}`}
-                              className={`h-11 rounded-lg border text-sm font-semibold tabular-nums transition-colors ${MARK[kind]}`}
-                            >
-                              {q?.no ?? '?'}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-          {tab === 'explain' && (notes ? <ExplainTab exam={exam} review={result.review} notes={notesByMondai} /> : notesPending)}
-          {tab === 'words' && (notes ? <StudyList exam={exam} notes={notes} parts={attempt.parts} /> : notesPending)}
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+            {tab === 'explain' && (notes ? <ExplainTab exam={exam} review={result.review} notes={notesByMondai} /> : notesPending)}
+            {tab === 'words' && (notes ? <StudyList exam={exam} notes={notes} parts={attempt.parts} /> : notesPending)}
+          </div>
+          <ReviewAudioDock />
         </div>
+
+        <div className="grid grid-cols-2 gap-3 lg:hidden">{actions}</div>
+
+        <Sheet open={!!opened} onClose={() => setOpen(null)} title={opened ? `Câu ${opened.q.label ?? opened.q.no}` : ''}>
+          {openReview && opened && <ReviewDetail review={openReview} q={opened.q} m={opened.m} notes={notesByMondai.get(opened.m.id)} />}
+        </Sheet>
       </div>
-
-      <div className="grid grid-cols-2 gap-3 lg:hidden">{actions}</div>
-
-      <Sheet open={!!opened} onClose={() => setOpen(null)} title={opened ? `Câu ${opened.q.label ?? opened.q.no}` : ''}>
-        {openReview && opened && <ReviewDetail review={openReview} q={opened.q} m={opened.m} notes={notesByMondai.get(opened.m.id)} />}
-      </Sheet>
-    </div>
+    </ReviewAudioProvider>
   );
 }
 

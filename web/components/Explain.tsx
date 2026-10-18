@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import type { MondaiNotes, PublicExam, PublicMondai, PublicQuestion, QuestionNote, QuestionReview } from '../../shared/types';
 import { Markup } from './Markup';
+import { ListenClip } from './ReviewAudio';
 
 export type Mark = 'right' | 'wrong' | 'blank' | 'ungraded';
 export const MARK_LABEL: Record<Mark, string> = { right: 'đúng', wrong: 'sai', blank: 'bỏ trống', ungraded: 'chưa có đáp án' };
@@ -61,9 +62,35 @@ function ScriptLine({ text, className }: { text: string; className: string }) {
   );
 }
 
+// Furigana on the scripts is one choice for every question, remembered between visits.
+const FURIGANA_KEY = 'script-furigana';
+const furiganaListeners = new Set<() => void>();
+let furigana = (() => {
+  try {
+    return localStorage.getItem(FURIGANA_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+})();
+function setFurigana(on: boolean) {
+  furigana = on;
+  try {
+    localStorage.setItem(FURIGANA_KEY, on ? 'on' : 'off');
+  } catch {
+    // private mode: the choice lasts until the page closes
+  }
+  furiganaListeners.forEach((l) => l());
+}
+const subscribeFurigana = (l: () => void) => {
+  furiganaListeners.add(l);
+  return () => furiganaListeners.delete(l);
+};
+
 /** What is said on the recording, each line followed by its translation. */
 function Script({ script, vi }: { script: string; vi: string }) {
   const [showVi, setShowVi] = useState(true);
+  const showFuri = useSyncExternalStore(subscribeFurigana, () => furigana);
+  const hasFuri = script.includes('{');
   const jp = script.split('\n');
   const lines = vi.split('\n');
   return (
@@ -74,7 +101,7 @@ function Script({ script, vi }: { script: string; vi: string }) {
         </span>
         Lời thoại
       </summary>
-      <div className="mt-2.5 space-y-2">
+      <div className={`mt-2.5 space-y-2 ${showFuri ? '' : 'no-furigana'}`}>
         {jp.map((line, i) => (
           <p key={i}>
             <ScriptLine text={line} className="jp block" />
@@ -82,9 +109,10 @@ function Script({ script, vi }: { script: string; vi: string }) {
           </p>
         ))}
       </div>
-      <button onClick={() => setShowVi((v) => !v)} className="mt-2 text-sm font-medium text-accent">
-        {showVi ? 'Ẩn bản dịch' : 'Hiện bản dịch'}
-      </button>
+      <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm font-medium text-accent">
+        <button onClick={() => setShowVi((v) => !v)}>{showVi ? 'Ẩn bản dịch' : 'Hiện bản dịch'}</button>
+        {hasFuri && <button onClick={() => setFurigana(!showFuri)}>{showFuri ? 'Ẩn furigana' : 'Hiện furigana'}</button>}
+      </div>
     </details>
   );
 }
@@ -171,6 +199,7 @@ export function QuestionExplained({ q, review, notes }: { q: PublicQuestion; rev
         </div>
       )}
       {q.image && <img src={q.image} alt="" className="w-full rounded-xl bg-white sm:max-w-md" loading="lazy" />}
+      <ListenClip id={q.id} />
       {note?.script && note.scriptVi && <Script script={note.script} vi={note.scriptVi} />}
       <Choices q={q} review={review} note={note} />
       {review.chosen === null && <p className="text-sm text-bad">Bạn chưa chọn câu này.</p>}
